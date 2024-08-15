@@ -83,6 +83,7 @@
       <groupId>${project.groupId}</groupId>
       <artifactId>tika-core</artifactId>
       <version>${project.version}</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -116,6 +117,6 @@
   </ciManagement>
 
   <scm>
-    <tag>2.2.1-rc2</tag>
+    <tag>3.0.0-BETA2-rc1</tag>
   </scm>
 </project>

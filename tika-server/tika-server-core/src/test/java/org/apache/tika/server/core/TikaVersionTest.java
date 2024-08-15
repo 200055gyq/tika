@@ -20,8 +20,8 @@ package org.apache.tika.server.core;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.InputStream;
-import javax.ws.rs.core.Response;
 
+import jakarta.ws.rs.core.Response;
 import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
 import org.apache.cxf.jaxrs.client.WebClient;
 import org.apache.cxf.jaxrs.lifecycle.SingletonResourceProvider;
@@ -45,11 +45,12 @@ public class TikaVersionTest extends CXFTestBase {
 
     @Test
     public void testGetVersion() throws Exception {
-        Response response =
-                WebClient.create(endPoint + VERSION_PATH).type("text/plain").accept("text/plain")
-                        .get();
+        Response response = WebClient
+                .create(endPoint + VERSION_PATH)
+                .type("text/plain")
+                .accept("text/plain")
+                .get();
 
-        assertEquals(new Tika().toString(),
-                getStringFromInputStream((InputStream) response.getEntity()));
+        assertEquals(Tika.getString(), getStringFromInputStream((InputStream) response.getEntity()));
     }
 }

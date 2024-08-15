@@ -23,6 +23,7 @@ import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.Set;
 
+import org.apache.commons.io.input.CloseShieldInputStream;
 import org.apache.poi.hwmf.record.HwmfFont;
 import org.apache.poi.hwmf.record.HwmfRecord;
 import org.apache.poi.hwmf.record.HwmfRecordType;
@@ -36,15 +37,15 @@ import org.xml.sax.SAXException;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.mime.MediaType;
-import org.apache.tika.parser.AbstractParser;
 import org.apache.tika.parser.ParseContext;
+import org.apache.tika.parser.Parser;
 import org.apache.tika.sax.XHTMLContentHandler;
 
 /**
  * This parser offers a very rough capability to extract text if there
  * is text stored in the WMF files.
  */
-public class WMFParser extends AbstractParser {
+public class WMFParser implements Parser {
 
     private static final MediaType MEDIA_TYPE = MediaType.image("wmf");
 
@@ -63,7 +64,7 @@ public class WMFParser extends AbstractParser {
         try {
             HwmfPicture picture = null;
             try {
-                picture = new HwmfPicture(stream);
+                picture = new HwmfPicture(CloseShieldInputStream.wrap(stream));
             } catch (ArrayIndexOutOfBoundsException e) {
                 //POI can throw this on corrupt files
                 throw new TikaException(e.getClass().getSimpleName() + ": " + e.getMessage(), e);

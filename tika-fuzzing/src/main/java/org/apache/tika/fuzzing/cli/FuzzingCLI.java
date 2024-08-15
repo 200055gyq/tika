@@ -6,7 +6,7 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -46,7 +46,6 @@ import org.apache.tika.fuzzing.general.ByteInjector;
 import org.apache.tika.fuzzing.general.GeneralTransformer;
 import org.apache.tika.fuzzing.general.SpanSwapper;
 import org.apache.tika.fuzzing.general.Truncator;
-import org.apache.tika.metadata.Metadata;
 import org.apache.tika.pipes.FetchEmitTuple;
 import org.apache.tika.pipes.PipesConfig;
 import org.apache.tika.pipes.PipesParser;
@@ -213,7 +212,8 @@ public class FuzzingCLI {
                     "." + FilenameUtils.getExtension(fetchEmitTuple.getFetchKey().getFetchKey()));
             try (InputStream is = fetcherManager.getFetcher(
                             fetchEmitTuple.getFetchKey().getFetcherName())
-                    .fetch(fetchEmitTuple.getFetchKey().getFetchKey(), new Metadata())) {
+                    .fetch(fetchEmitTuple.getFetchKey().getFetchKey(), fetchEmitTuple.getMetadata(),
+                            fetchEmitTuple.getParseContext())) {
                 try (OutputStream os = Files.newOutputStream(target)) {
                     transformer.transform(is, os);
                 }
@@ -229,7 +229,7 @@ public class FuzzingCLI {
                 case TIMEOUT:
                 case UNSPECIFIED_CRASH:
                     if (tries < maxRetries) {
-                        LOG.info("trying again ({} of {}) {} : {}", tries, maxRetries,
+                        LOG.info("trying again ({} of {}): {}", tries, maxRetries,
                                 status.name());
                         return true;
                     }
@@ -256,7 +256,7 @@ public class FuzzingCLI {
 
     }
 
-    private class FileAdder implements Callable<Integer> {
+    private static class FileAdder implements Callable<Integer> {
         private final PipesIterator pipesIterator;
         private final ArrayBlockingQueue<FetchEmitTuple> queue;
         private int added = 0;

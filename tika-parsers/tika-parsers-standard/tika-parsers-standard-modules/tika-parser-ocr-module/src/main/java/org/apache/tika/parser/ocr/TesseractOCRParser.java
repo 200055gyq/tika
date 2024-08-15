@@ -65,14 +65,19 @@ import org.apache.tika.config.Param;
 import org.apache.tika.config.TikaTaskTimeout;
 import org.apache.tika.exception.TikaConfigException;
 import org.apache.tika.exception.TikaException;
+import org.apache.tika.extractor.ParentContentHandler;
 import org.apache.tika.io.TemporaryResources;
 import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.Property;
+import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.mime.MediaType;
 import org.apache.tika.parser.AbstractExternalProcessParser;
 import org.apache.tika.parser.ParseContext;
 import org.apache.tika.parser.external.ExternalParser;
+import org.apache.tika.sax.BodyContentHandler;
+import org.apache.tika.sax.EmbeddedContentHandler;
+import org.apache.tika.sax.TeeContentHandler;
 import org.apache.tika.sax.XHTMLContentHandler;
 import org.apache.tika.utils.StringUtils;
 import org.apache.tika.utils.XMLReaderUtils;
@@ -126,6 +131,8 @@ public class TesseractOCRParser extends AbstractExternalProcessParser implements
 
                     })));
     private static volatile boolean HAS_WARNED = false;
+    private static volatile boolean HAS_CHECKED_FOR_IMAGE_MAGICK = false;
+
     //if a user specifies a custom tess path or tessdata path
     //load the available languages at initialization time
     private final Set<String> langs = new HashSet<>();
@@ -190,7 +197,10 @@ public class TesseractOCRParser extends AbstractExternalProcessParser implements
         return hasTesseract;
     }
 
-    boolean hasImageMagick() throws TikaConfigException {
+    synchronized boolean hasImageMagick() throws TikaConfigException {
+        if (HAS_CHECKED_FOR_IMAGE_MAGICK) {
+            return hasImageMagick;
+        }
         // Fetch where the config says to find ImageMagick Program
         String fullImageMagickPath = imageMagickPath + getImageMagickProg();
 
@@ -208,7 +218,7 @@ public class TesseractOCRParser extends AbstractExternalProcessParser implements
             LOG.debug("ImageMagick does not appear to be installed " + "(commandline: " +
                     fullImageMagickPath + ")");
         }
-
+        HAS_CHECKED_FOR_IMAGE_MAGICK = true;
         return hasImageMagick;
 
     }
@@ -223,7 +233,7 @@ public class TesseractOCRParser extends AbstractExternalProcessParser implements
             try (OutputStream fos = new FileOutputStream(file)) {
                 ImageIO.write(bImage, "png", fos);
             }
-            try (TikaInputStream tis = TikaInputStream.get(file)) {
+            try (TikaInputStream tis = TikaInputStream.get(file.toPath())) {
                 parse(tis, handler, metadata, context);
             }
         }
@@ -245,6 +255,11 @@ public class TesseractOCRParser extends AbstractExternalProcessParser implements
             return;
         }
 
+        //if you haven't checked yet, and a per file config requests imagemagick
+        //and if the default is not to use image processing
+        if (! HAS_CHECKED_FOR_IMAGE_MAGICK && config.isEnableImagePreprocessing()) {
+            hasImageMagick = hasImageMagick();
+        }
 
         try (TemporaryResources tmp = new TemporaryResources()) {
             TikaInputStream tikaStream = TikaInputStream.get(stream, tmp, metadata);
@@ -255,11 +270,31 @@ public class TesseractOCRParser extends AbstractExternalProcessParser implements
             //this is the text output file name specified on the tesseract
             //commandline.  The actual output file name will have a suffix added.
             File tmpOCROutputFile = tmp.createTemporaryFile();
-            XHTMLContentHandler xhtml = new XHTMLContentHandler(handler, metadata);
+            ContentHandler baseHandler = getContentHandler(config.isInlineContent(), handler, metadata, parseContext);
+            XHTMLContentHandler xhtml = new XHTMLContentHandler(baseHandler, metadata);
             xhtml.startDocument();
             parse(tikaStream, tmpOCROutputFile, xhtml, metadata, parseContext, config);
             xhtml.endDocument();
         }
+    }
+
+    private ContentHandler getContentHandler(boolean isInlineContent,
+                                             ContentHandler handler, Metadata metadata, ParseContext parseContext) {
+        if (! isInlineContent) {
+            return handler;
+        }
+        //check for inlining of the parent content handler
+        //if there's no parent, skip
+        ParentContentHandler parentContentHandler = parseContext.get(ParentContentHandler.class);
+        if (parentContentHandler == null) {
+            return handler;
+        }
+        String embeddedType = metadata.get(TikaCoreProperties.EMBEDDED_RESOURCE_TYPE);
+        if (! TikaCoreProperties.EmbeddedResourceType.INLINE.name().equals(embeddedType)) {
+            return handler;
+        }
+        //check for literally the same or wrapped parent and handler?
+        return new TeeContentHandler(new EmbeddedContentHandler(new BodyContentHandler(parentContentHandler.getContentHandler())), handler);
     }
 
     private void parse(TikaInputStream tikaInputStream, File tmpOCROutputFile,
@@ -528,7 +563,11 @@ public class TesseractOCRParser extends AbstractExternalProcessParser implements
     @Override
     public void initialize(Map<String, Param> params) throws TikaConfigException {
         hasTesseract = hasTesseract();
-        hasImageMagick = hasImageMagick();
+        if (isEnableImagePreprocessing()) {
+            hasImageMagick = hasImageMagick();
+        } else {
+            hasImageMagick = false;
+        }
         if (preloadLangs) {
             preloadLangs();
             if (!StringUtils.isBlank(defaultConfig.getLanguage())) {
@@ -809,6 +848,15 @@ public class TesseractOCRParser extends AbstractExternalProcessParser implements
 
     public boolean isApplyRotation() {
         return defaultConfig.isApplyRotation();
+    }
+
+    @Field
+    public void setInlineContent(boolean inlineContent) {
+        defaultConfig.setInlineContent(inlineContent);
+    }
+
+    public boolean isInlineContent() {
+        return defaultConfig.isInlineContent();
     }
     /**
      * If set to <code>true</code> and if tesseract is found, this will load the

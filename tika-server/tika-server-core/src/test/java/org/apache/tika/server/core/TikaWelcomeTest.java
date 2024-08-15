@@ -20,8 +20,8 @@ package org.apache.tika.server.core;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
-import javax.ws.rs.core.Response;
 
+import jakarta.ws.rs.core.Response;
 import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
 import org.apache.cxf.jaxrs.client.WebClient;
 import org.apache.cxf.jaxrs.lifecycle.ResourceProvider;
@@ -57,12 +57,14 @@ public class TikaWelcomeTest extends CXFTestBase {
 
     @Test
     public void testGetHTMLWelcome() throws Exception {
-        String html =
-                WebClient.create(endPoint + WELCOME_PATH).type("text/html").accept("text/html")
-                        .get(String.class);
+        String html = WebClient
+                .create(endPoint + WELCOME_PATH)
+                .type("text/html")
+                .accept("text/html")
+                .get(String.class);
 
 
-        assertContains(new Tika().toString(), html);
+        assertContains(Tika.getString(), html);
         assertContains("href=\"http", html);
 
         // Check our details were found
@@ -76,12 +78,14 @@ public class TikaWelcomeTest extends CXFTestBase {
 
     @Test
     public void testGetTextWelcome() throws Exception {
-        Response response =
-                WebClient.create(endPoint + WELCOME_PATH).type("text/plain").accept("text/plain")
-                        .get();
+        Response response = WebClient
+                .create(endPoint + WELCOME_PATH)
+                .type("text/plain")
+                .accept("text/plain")
+                .get();
 
         String text = getStringFromInputStream((InputStream) response.getEntity());
-        assertContains(new Tika().toString(), text);
+        assertContains(Tika.getString(), text);
 
         // Check our details were found
         assertContains("GET " + WELCOME_PATH, text);
@@ -94,9 +98,11 @@ public class TikaWelcomeTest extends CXFTestBase {
 
     @Test
     public void testProperPathWelcome() throws Exception {
-        Response response =
-                WebClient.create(endPoint + WELCOME_PATH).type("text/html").accept("text/html")
-                        .get();
+        Response response = WebClient
+                .create(endPoint + WELCOME_PATH)
+                .type("text/html")
+                .accept("text/html")
+                .get();
 
         String html = getStringFromInputStream((InputStream) response.getEntity());
         assertContains(PATH_RESOURCE, html);

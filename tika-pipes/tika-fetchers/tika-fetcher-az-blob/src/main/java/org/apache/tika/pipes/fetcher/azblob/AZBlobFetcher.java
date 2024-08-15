@@ -20,8 +20,6 @@ import static org.apache.tika.config.TikaConfig.mustNotBeEmpty;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 
@@ -43,23 +41,35 @@ import org.apache.tika.exception.TikaException;
 import org.apache.tika.io.TemporaryResources;
 import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.metadata.Metadata;
+import org.apache.tika.parser.ParseContext;
 import org.apache.tika.pipes.fetcher.AbstractFetcher;
+import org.apache.tika.pipes.fetcher.azblob.config.AZBlobFetcherConfig;
 import org.apache.tika.utils.StringUtils;
 
 /**
  * Fetches files from Azure blob storage.
- *
+ * <p>
  * There are two modes:
  * 1) If you are only using one endpoint and one sas token and one container,
- *    configure those in the config file.  In this case, your fetchKey will
- *    be the path in the container to the blob.
+ * configure those in the config file.  In this case, your fetchKey will
+ * be the path in the container to the blob.
  * 2) If you have different endpoints or sas tokens or containers across
- *    your requests, your fetchKey will be the complete SAS url pointing to the blob.
+ * your requests, your fetchKey will be the complete SAS url pointing to the blob.
  */
 public class AZBlobFetcher extends AbstractFetcher implements Initializable {
+    public AZBlobFetcher() {
 
-    private static String PREFIX = "az-blob";
+    }
+    public AZBlobFetcher(AZBlobFetcherConfig azBlobFetcherConfig) {
+        setContainer(azBlobFetcherConfig.getContainer());
+        setEndpoint(azBlobFetcherConfig.getEndpoint());
+        setSasToken(azBlobFetcherConfig.getSasToken());
+        setSpoolToTemp(azBlobFetcherConfig.isSpoolToTemp());
+        setExtractUserMetadata(azBlobFetcherConfig.isExtractUserMetadata());
+    }
+
     private static final Logger LOGGER = LoggerFactory.getLogger(AZBlobFetcher.class);
+    private static String PREFIX = "az-blob";
     private String sasToken;
     private String container;
     private String endpoint;
@@ -70,7 +80,7 @@ public class AZBlobFetcher extends AbstractFetcher implements Initializable {
     private boolean spoolToTemp = true;
 
     @Override
-    public InputStream fetch(String fetchKey, Metadata metadata) throws TikaException, IOException {
+    public InputStream fetch(String fetchKey, Metadata metadata, ParseContext parseContext) throws TikaException, IOException {
 
         LOGGER.debug("about to fetch fetchkey={} from endpoint ({})", fetchKey, endpoint);
 
@@ -80,7 +90,9 @@ public class AZBlobFetcher extends AbstractFetcher implements Initializable {
             if (extractUserMetadata) {
                 BlobProperties properties = blobClient.getProperties();
                 if (properties.getMetadata() != null) {
-                    for (Map.Entry<String, String> e : properties.getMetadata().entrySet()) {
+                    for (Map.Entry<String, String> e : properties
+                            .getMetadata()
+                            .entrySet()) {
                         metadata.add(PREFIX + ":" + e.getKey(), e.getValue());
                     }
                 }
@@ -91,9 +103,7 @@ public class AZBlobFetcher extends AbstractFetcher implements Initializable {
                 long start = System.currentTimeMillis();
                 TemporaryResources tmpResources = new TemporaryResources();
                 Path tmp = tmpResources.createTempFile();
-                try (OutputStream os = Files.newOutputStream(tmp)) {
-                    blobClient.download(os);
-                }
+                blobClient.downloadToFile(tmp.toRealPath().toString());
                 TikaInputStream tis = TikaInputStream.get(tmp, metadata, tmpResources);
                 long elapsed = System.currentTimeMillis() - start;
                 LOGGER.debug("took {} ms to copy to local tmp file", elapsed);
@@ -123,6 +133,7 @@ public class AZBlobFetcher extends AbstractFetcher implements Initializable {
     public void setContainer(String container) {
         this.container = container;
     }
+
     /**
      * Whether or not to extract user metadata from the blob object
      *
@@ -152,11 +163,9 @@ public class AZBlobFetcher extends AbstractFetcher implements Initializable {
     }
 
     @Override
-    public void checkInitialization(InitializableProblemHandler problemHandler)
-            throws TikaConfigException {
+    public void checkInitialization(InitializableProblemHandler problemHandler) throws TikaConfigException {
         //if the user has set one of these, they need to have set all of them
-        if (!StringUtils.isBlank(this.sasToken) ||
-                !StringUtils.isBlank(this.endpoint) || !StringUtils.isBlank(this.container)) {
+        if (!StringUtils.isBlank(this.sasToken) || !StringUtils.isBlank(this.endpoint) || !StringUtils.isBlank(this.container)) {
             mustNotBeEmpty("sasToken", this.sasToken);
             mustNotBeEmpty("endpoint", this.endpoint);
             mustNotBeEmpty("container", this.container);
@@ -189,7 +198,9 @@ public class AZBlobFetcher extends AbstractFetcher implements Initializable {
 
         @Override
         public BlobClient getClient(String fetchKey) {
-            return new BlobClientBuilder().connectionString(fetchKey).buildClient();
+            return new BlobClientBuilder()
+                    .connectionString(fetchKey)
+                    .buildClient();
         }
     }
 }

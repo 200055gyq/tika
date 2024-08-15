@@ -119,7 +119,8 @@ public class ChmExtractor {
             getChmLzxcResetTable().parse(dir_chunk, getChmLzxcResetTable());
 
             setIndexOfContent(ChmCommons
-                    .indexOf(getChmDirList().getDirectoryListingEntryList(), ChmConstants.CONTENT));
+                    .indexOfDataSpaceStorageElement(getChmDirList().getDirectoryListingEntryList(),
+                            ChmConstants.CONTENT));
             setLzxBlockOffset(
                     (getChmDirList().getDirectoryListingEntryList().get(getIndexOfContent())
                             .getOffset() + getChmItsfHeader().getDataOffset()));
@@ -251,7 +252,7 @@ public class ChmExtractor {
      */
     public byte[] extractChmEntry(DirectoryListingEntry directoryListingEntry)
             throws TikaException {
-        UnsynchronizedByteArrayOutputStream buffer = new UnsynchronizedByteArrayOutputStream();
+        UnsynchronizedByteArrayOutputStream buffer = UnsynchronizedByteArrayOutputStream.builder().get();
         ChmLzxBlock lzxBlock = null;
         try {
             /* UNCOMPRESSED type is easiest one */

@@ -21,12 +21,12 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.IOException;
 import java.io.InputStream;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
 
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,7 +45,9 @@ public class LanguageResource {
     @Produces("text/plain")
     public String detect(final InputStream is) throws IOException {
         String fileTxt = IOUtils.toString(is, UTF_8);
-        LanguageResult language = new OptimaizeLangDetector().loadModels().detect(fileTxt);
+        LanguageResult language = new OptimaizeLangDetector()
+                .loadModels()
+                .detect(fileTxt);
         String detectedLang = language.getLanguage();
         LOG.info("Detecting language for incoming resource: [{}]", detectedLang);
         return detectedLang;
@@ -57,7 +59,9 @@ public class LanguageResource {
     @Consumes("*/*")
     @Produces("text/plain")
     public String detect(final String string) throws IOException {
-        LanguageResult language = new OptimaizeLangDetector().loadModels().detect(string);
+        LanguageResult language = new OptimaizeLangDetector()
+                .loadModels()
+                .detect(string);
         String detectedLang = language.getLanguage();
         LOG.info("Detecting language for incoming resource: [{}]", detectedLang);
         return detectedLang;

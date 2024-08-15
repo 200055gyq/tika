@@ -157,7 +157,8 @@
     <glob pattern="*.davmount"/>
   </mime-type>
   <mime-type type="application/x-dbf">
-    <magic priority="100">
+    <!-- this looks unique/precise. It isn't. False positives are common. Keep priority low. -->
+    <magic priority="40">
       <match value="(?s)^[\\x02\\x03\\x30\\x31\\x32\\x43\\x63\\x83\\x8B\\xCB\\xF5\\xE5\\xFB].[\\x01-\\x0C][\\x01-\\x1F].{4}(?:.[^\\x00]|[\\x41-\\xFF].)(?:[^\\x00\\x01].|.[^\\x00]).{31}(?&lt;=[\\x00][^\\x00]{0,10})[A-Z@+]" type="regex" offset="0"/>
     </magic>
     <glob pattern="*.dbf"/>
@@ -366,15 +367,18 @@
     <glob pattern="*.ser"/>
   </mime-type>
 
-  <mime-type type="application/javascript">
+  <mime-type type="text/javascript">
+    <alias type="application/javascript"/>
     <alias type="application/x-javascript"/>
-    <alias type="text/javascript"/>
     <sub-class-of type="text/plain"/>
     <_comment>JavaScript Source Code</_comment>
+    <!-- From RFC 9239: https://www.rfc-editor.org/rfc/rfc9239.html#name-text-javascript -->
+    <!-- File extension(s): .js, .mjs -->
     <glob pattern="*.js"/>
+    <glob pattern="*.mjs"/>
 
     <!-- Note - there is no Unique Magic for JavaScript files! -->
-    <!-- Generally you can only detect JS with the filename -->
+    <!-- Generally, you can only detect JS with the filename -->
     <!-- However... A few common JS libraries accidentally trigger -->
     <!--  the HTML priority=20 magic incorrectly. So, for those only, -->
     <!--  we list "magic" for those specific files -->
@@ -2062,11 +2066,20 @@
     <glob pattern="*.ost"/>
   </mime-type>
 
+  <mime-type type="application/vnd.ms-package.3dmanufacturing-3dmodel+xml">
+    <tika:link>https://en.wikipedia.org/wiki/3D_Manufacturing_Format</tika:link>
+    <_comment>3D manufacturing format</_comment>
+    <glob pattern="*.3mf"/>
+  </mime-type>
+
   <mime-type type="application/vnd.ms-pki.seccat">
     <glob pattern="*.cat"/>
   </mime-type>
   <mime-type type="application/vnd.ms-pki.stl">
-    <glob pattern="*.stl"/>
+    <!-- on TIKA-4223, we moved this glob to model/x.stl-binary.
+    We think this pki.stl is a subtype of pkcs7-signature?!
+    -->
+    <!--<glob pattern="*.stl"/> -->
   </mime-type>
   <mime-type type="application/vnd.ms-playready.initiator+xml"/>
 
@@ -2133,9 +2146,12 @@
     <!-- robots.txt file -->
     <!-- draft: https://datatracker.ietf.org/doc/html/draft-koster-rep -->
     <!-- should have a higher priority than rfc822 - TIKA-3489 -->
+    <!-- and a lower priority than pcap - TIKA-4174 -->
     <magic priority="55">
       <match minShouldMatch="2">
         <match value="user-agent:" type="stringignorecase" offset="0"/>
+        <match value="allow:" type="stringignorecase" offset="0"/>
+        <match value="disallow:" type="stringignorecase" offset="0"/>
         <match value="sitemap:" type="stringignorecase" offset="0"/>
         <match value="\nuser-agent:" type="stringignorecase" offset="0:1000"/>
         <match value="\nallow:" type="stringignorecase" offset="0:1000"/>
@@ -2925,7 +2941,7 @@
 
   <mime-type type="application/vnd.tcpdump.pcap">
     <_comment>TCPDump pcap packet capture</_comment>
-    <magic priority="50">
+    <magic priority="60">
       <match value="0xa1b2c3d4" type="big32" offset="0" />
       <match value="0xd4c3b2a1" type="big32" offset="0" />
     </magic>
@@ -2936,7 +2952,7 @@
   <mime-type type="application/vnd.tcpdump.pcapng">
     <_comment>TCPDump next gen pcap packet capture</_comment>
     <tika:link>https://www.ietf.org/staging/draft-tuexen-opsawg-pcapng-02.html</tika:link>
-    <magic priority="50">
+    <magic priority="60">
       <match value="0x0A0D0D0A" type="string" offset="0">
         <!-- Could only find examples of the second. I have not tested the first -->
         <match value="0xa1b2c3d4" type="big32" offset="8" />
@@ -3279,6 +3295,12 @@
       <match value="0x4163746976654D696D650000" type="string" offset="0">
     </match>
     </magic>
+  </mime-type>
+  <mime-type type="application/x-amf">
+    <tika:link>https://en.wikipedia.org/wiki/Additive_manufacturing_file_format</tika:link>
+    <root-XML localName="amf"/>
+    <glob pattern="*.amf"/>
+    <sub-class-of type="application/xml"/>
   </mime-type>
   <mime-type type="application/x-atari-floppy-disk-image">
     <tika:link>http://fileformats.archiveteam.org/wiki/ATR</tika:link>
@@ -3882,6 +3904,11 @@
         <match value="0x0001" type="string" offset="16"/>
       </match>
     </magic>
+  </mime-type>
+  <mime-type type="application/x-openscad">
+    <tika:link>https://openscad.org/index.html</tika:link>
+    <glob pattern="*.scad"/>
+    <sub-class-of type="text/plain"/>
   </mime-type>
   <mime-type type="application/x-executable">
     <sub-class-of type="application/x-elf"/>
@@ -4852,11 +4879,114 @@
   </mime-type>
 
   <mime-type type="application/x-sqlite3">
+    <!--sqlite subtypes are from: https://www.sqlite.org/src/artifact?ci=trunk&filename=magic.txt -->
     <magic priority="50">
       <match value="SQLite format 3\x00" type="string" offset="0"/>
     </magic>
   </mime-type>
-
+  <!-- geo package >= 1.2.x -->
+  <mime-type type="application/x-geopackage">
+    <url>https://www.geopackage.org/</url>
+    <!-- should be higher than application/x-sqlite3 -->
+    <magic priority="60">
+      <match value="SQLite format 3\x00" type="string" offset="0">
+        <match value="0x47504b47" type="string" offset="68"/>
+      </match>
+    </magic>
+    <glob pattern="*.gpkg"/>
+    <sub-class-of type="application/x-sqlite3"/>
+  </mime-type>
+  <!-- geo package 1.0.x or 1.1.x -->
+  <mime-type type="application/x-geopackage; version=1.1Or1.0">
+    <url>https://www.geopackage.org/</url>
+    <magic priority="60">
+      <match value="SQLite format 3\x00" type="string" offset="0">
+        <match value="0x47503130" type="string" offset="68"/>
+      </match>
+    </magic>
+    <glob pattern="*.gpkg"/>
+    <sub-class-of type="application/x-sqlite3"/>
+  </mime-type>
+  <mime-type type="application/x-fossil-checkout">
+    <magic priority="60">
+      <match value="SQLite format 3\x00" type="string" offset="0">
+        <match value="0x0f055112" type="string" offset="68"/>
+      </match>
+    </magic>
+    <sub-class-of type="application/x-sqlite3"/>
+  </mime-type>
+  <mime-type type="application/x-fossil-checkout">
+    <magic priority="60">
+      <match value="SQLite format 3\x00" type="string" offset="0">
+        <match value="0x0f055112" type="string" offset="68"/>
+      </match>
+    </magic>
+    <sub-class-of type="application/x-sqlite3"/>
+  </mime-type>
+  <mime-type type="application/x-fossil-global-conf">
+    <magic priority="60">
+      <match value="SQLite format 3\x00" type="string" offset="0">
+        <match value="0x0f055113" type="string" offset="68"/>
+      </match>
+    </magic>
+    <sub-class-of type="application/x-sqlite3"/>
+  </mime-type>
+  <mime-type type="application/x-fossil-repository">
+    <magic priority="60">
+      <match value="SQLite format 3\x00" type="string" offset="0">
+        <match value="0x0f055111" type="string" offset="68"/>
+      </match>
+    </magic>
+    <sub-class-of type="application/x-sqlite3"/>
+  </mime-type>
+  <mime-type type="application/x-bentley-besqlite">
+    <magic priority="60">
+      <match value="SQLite format 3\x00" type="string" offset="0">
+        <match value="0x42654462" type="string" offset="68"/>
+      </match>
+    </magic>
+    <sub-class-of type="application/x-sqlite3"/>
+  </mime-type>
+  <mime-type type="application/x-bentley-localization">
+    <magic priority="60">
+      <match value="SQLite format 3\x00" type="string" offset="0">
+        <match value="0x42654c6e" type="string" offset="68"/>
+      </match>
+    </magic>
+    <sub-class-of type="application/x-sqlite3"/>
+  </mime-type>
+  <mime-type type="application/x-monotone-source-repo">
+    <magic priority="60">
+      <match value="SQLite format 3\x00" type="string" offset="0">
+        <match value="0x5f4d544e" type="string" offset="68"/>
+      </match>
+    </magic>
+    <sub-class-of type="application/x-sqlite3"/>
+  </mime-type>
+  <mime-type type="application/x-esri-spatially-enabled-db">
+    <magic priority="60">
+      <match value="SQLite format 3\x00" type="string" offset="0">
+        <match value="0x45737269" type="string" offset="68"/>
+      </match>
+    </magic>
+    <sub-class-of type="application/x-sqlite3"/>
+  </mime-type>
+  <mime-type type="application/x-mbtiles">
+    <magic priority="60">
+      <match value="SQLite format 3\x00" type="string" offset="0">
+        <match value="0x4d504258" type="string" offset="68"/>
+      </match>
+    </magic>
+    <sub-class-of type="application/x-sqlite3"/>
+  </mime-type>
+  <mime-type type="application/x-texnicard">
+    <magic priority="60">
+      <match value="SQLite format 3\x00" type="string" offset="0">
+        <match value="0x6a035744" type="string" offset="68"/>
+      </match>
+    </magic>
+    <sub-class-of type="application/x-sqlite3"/>
+  </mime-type>
   <mime-type type="application/x-stata-do">
     <_comment>Stata DTA Script</_comment>
     <acronym>DO</acronym>
@@ -5144,6 +5274,8 @@
     <!-- Always seem to have a version integer as their first entry, -->
     <!--  normally 00, 01 or 02, check for that -->
     <magic priority="40">
+      <match value="0x3080020100" type="string"
+              mask="0xFFFFFFFFFC" offset="0"/>
       <match value="0x3081FF020100" type="string"
               mask="0xFFFF00FFFFFC" offset="0"/>
       <match value="0x3082FFFF020100" type="string"
@@ -5162,6 +5294,15 @@
       <!-- PEM encoded only -->
       <match value="-----BEGIN EC PARAMETERS-----" type="string" offset="0"/>
     </magic>
+  </mime-type>
+  <mime-type type="application/x-java-keystore">
+  	<_comment>Java Keystore</_comment>
+    <tika:link>https://en.wikipedia.org/wiki/Java_KeyStore</tika:link>
+    <magic priority="50">
+    	<!-- magic byte: https://en.wikipedia.org/wiki/List_of_file_signatures -->
+        <match value="0xfeedfeed" type="string" offset="0:4"/>
+    </magic>
+    <glob pattern="*.jks" />
   </mime-type>
 
   <mime-type type="application/x-xfig">
@@ -6591,8 +6732,16 @@
     <acronym>PBM</acronym>
     <_comment>Portable Bit Map</_comment>
     <magic priority="50">
-      <match value="P1" type="string" offset="0"/>
-      <match value="P4" type="string" offset="0"/>
+      <match value="P1" type="string" offset="0">
+        <match value="\x0a" type="string" offset="2"/>
+        <match value="\x0d" type="string" offset="2"/>
+        <match value="\x20" type="string" offset="2"/>
+      </match>
+      <match value="P4" type="regex" offset="0">
+        <match value="\x0a" type="string" offset="2"/>
+        <match value="\x0d" type="string" offset="2"/>
+        <match value="\x20" type="string" offset="2"/>
+      </match>
     </magic>
     <glob pattern="*.pbm"/>
   </mime-type>
@@ -6602,9 +6751,16 @@
     <acronym>PGM</acronym>
     <_comment>Portable Graymap Graphic</_comment>
     <magic priority="50">
-      <match value="P2" type="string" offset="0"/>
-      <match value="P5" type="string" offset="0"/>
-      <match offset="0" type="string" value="\x50\x35\x0a"/>
+      <match value="P2" type="string" offset="0">
+        <match value="\x0a" type="string" offset="2"/>
+        <match value="\x0d" type="string" offset="2"/>
+        <match value="\x20" type="string" offset="2"/>
+      </match>
+      <match value="P5" type="regex" offset="0">
+        <match value="\x0a" type="string" offset="2"/>
+        <match value="\x0d" type="string" offset="2"/>
+        <match value="\x20" type="string" offset="2"/>
+      </match>
     </magic>
     <glob pattern="*.pgm"/>
   </mime-type>
@@ -6614,13 +6770,33 @@
     <acronym>PXM</acronym>
     <_comment>UNIX Portable Bitmap Graphic</_comment>
     <magic priority="50">
-      <match value="P3" type="string" offset="0"/>
-      <match value="P6" type="string" offset="0"/>
-      <match value="P7" type="string" offset="0"/>
-       <match offset="0" type="string" value="\x50\x34\x0a"/>
+      <match value="P3" type="string" offset="0">
+        <match value="\x0a" type="string" offset="2"/>
+        <match value="\x0d" type="string" offset="2"/>
+        <match value="\x20" type="string" offset="2"/>
+      </match>
+      <match value="P6" type="regex" offset="0">
+        <match value="\x0a" type="string" offset="2"/>
+        <match value="\x0d" type="string" offset="2"/>
+        <match value="\x20" type="string" offset="2"/>
+      </match>
     </magic>
     <glob pattern="*.ppm"/>
   </mime-type>
+  <mime-type type="image/x-portable-arbitrarymap">
+    <sub-class-of type="image/x-portable-anymap"/>
+    <acronym>PAM</acronym>
+    <_comment>UNIX Portable Bitmap Graphic Arbitrary Map</_comment>
+    <magic priority="50">
+      <match value="P7" type="string" offset="0">
+        <match value="\x0a" type="string" offset="2"/>
+        <match value="\x0d" type="string" offset="2"/>
+        <match value="\x20" type="string" offset="2"/>
+      </match>
+    </magic>
+    <glob pattern="*.pam"/>
+  </mime-type>
+
 
   <mime-type type="image/x-raw-adobe">
     <acronym>DNG</acronym>
@@ -6867,42 +7043,73 @@
       </match>
     </magic>
     <magic priority="45">
-      <!-- be a bit more flexible, but require two of these -->
+      <!-- be a bit more flexible, but require one from each of these -->
       <match minShouldMatch="2">
-        <match value="Date:" type="stringignorecase" offset="0"/>
-        <match value="Delivered-To:" type="string" offset="0"/>
-        <match value="From:" type="stringignorecase" offset="0"/>
-        <match value="Message-ID:" type="stringignorecase" offset="0"/>
-        <match value="MIME-Version:" type="stringignorecase" offset="0"/>
-        <match value="Received:" type="stringignorecase" offset="0"/>
-        <match value="Relay-Version:" type="stringignorecase" offset="0"/>
-        <match value="Return-Path:" type="stringignorecase" offset="0"/>
-        <match value="Sent:" type="string" offset="0"/>
-        <match value="Status:" type="string" offset="0"/>
-        <match value="User-Agent:" type="string" offset="0"/>
-        <match value="X-Mailer:" type="string" offset="0"/>
-        <match value="X-Originating-IP:" type="stringignorecase" offset="0"/>
 
-        <match value="\nContent-ID:" type="stringignorecase" offset="0:1024"/>
-        <match value="\nContent-Location:" type="stringignorecase" offset="0:1024"/>
-        <match value="\nContent-Transfer-Encoding:" type="stringignorecase" offset="0:1024"/>
-        <match value="\nContent-Type:" type="stringignorecase" offset="0:1024"/>
-        <match value="\nDate:" type="stringignorecase" offset="0:1024"/>
-        <match value="\nDelivered-To:" type="string" offset="0:1024"/>
-        <match value="\nFrom:" type="stringignorecase" offset="0:1024"/>
-        <match value="\nMIME-Version:" type="stringignorecase" offset="0:1024"/>
-        <match value="\nReceived:" type="stringignorecase" offset="0:1024"/>
-        <match value="\nRelay-Version:" type="stringignorecase" offset="0:1024"/>
-        <match value="\nReturn-Path:" type="stringignorecase" offset="0:1024"/>
-        <match value="\nSent:" type="string" offset="0:1024"/>
-        <match value="\nStatus:" type="string" offset="0:1024"/>
-        <match value="\nSubject:" type="string" offset="0:1024"/>
-        <match value="\nTo:" type="string" offset="0:1024"/>
-        <match value="\nUser-Agent:" type="string" offset="0:1024"/>
-        <match value="\nX-Mailer:" type="string" offset="0:1024"/>
-        <match value="\nX-Originating-IP:" type="stringignorecase" offset="0:1024"/>
-        <match value="\nDKIM-" type="string" offset="0:1024"/>
-        <match value="\nARC-" type="string" offset="0:1024"/>
+        <match minShouldMatch="1">
+          <match value="Content-ID:" type="stringignorecase" offset="0"/>
+          <match value="Content-Location:" type="stringignorecase" offset="0"/>
+          <match value="Content-Transfer-Encoding:" type="stringignorecase" offset="0"/>
+          <match value="Content-Type:" type="stringignorecase" offset="0"/>
+          <match value="Date:" type="stringignorecase" offset="0"/>
+          <match value="Delivered-To:" type="string" offset="0"/>
+          <match value="From:" type="stringignorecase" offset="0"/>
+          <match value="Message-ID:" type="stringignorecase" offset="0"/>
+          <match value="MIME-Version:" type="stringignorecase" offset="0"/>
+          <match value="Received:" type="stringignorecase" offset="0"/>
+          <match value="Relay-Version:" type="stringignorecase" offset="0"/>
+          <match value="Return-Path:" type="stringignorecase" offset="0"/>
+          <match value="Sent:" type="string" offset="0"/>
+          <match value="Status:" type="string" offset="0"/>
+          <match value="Subject:" type="string" offset="0"/>
+          <match value="To:" type="string" offset="0"/>
+          <match value="User-Agent:" type="string" offset="0"/>
+          <match value="X-Mailer:" type="string" offset="0"/>
+          <match value="X-Originating-IP:" type="stringignorecase" offset="0"/>
+          <match value="0xefbbbf" type="string" offset="0">
+            <match value="Content-ID:" type="stringignorecase" offset="3"/>
+            <match value="Content-Location:" type="stringignorecase" offset="3"/>
+            <match value="Content-Transfer-Encoding:" type="stringignorecase" offset="3"/>
+            <match value="Content-Type:" type="stringignorecase" offset="3"/>
+            <match value="Date:" type="stringignorecase" offset="3"/>
+            <match value="Delivered-To:" type="string" offset="3"/>
+            <match value="From:" type="stringignorecase" offset="3"/>
+            <match value="Message-ID:" type="stringignorecase" offset="3"/>
+            <match value="MIME-Version:" type="stringignorecase" offset="3"/>
+            <match value="Received:" type="stringignorecase" offset="3"/>
+            <match value="Relay-Version:" type="stringignorecase" offset="3"/>
+            <match value="Return-Path:" type="stringignorecase" offset="3"/>
+            <match value="Sent:" type="string" offset="3"/>
+            <match value="Status:" type="string" offset="3"/>
+            <match value="Subject:" type="string" offset="3"/>
+            <match value="To:" type="string" offset="3"/>
+            <match value="User-Agent:" type="string" offset="3"/>
+            <match value="X-Mailer:" type="string" offset="3"/>
+            <match value="X-Originating-IP:" type="stringignorecase" offset="3"/>
+          </match>
+        </match>
+        <match minShouldMatch="1">
+          <match value="\nContent-ID:" type="stringignorecase" offset="0:1024"/>
+          <match value="\nContent-Location:" type="stringignorecase" offset="0:1024"/>
+          <match value="\nContent-Transfer-Encoding:" type="stringignorecase" offset="0:1024"/>
+          <match value="\nContent-Type:" type="stringignorecase" offset="0:1024"/>
+          <match value="\nDate:" type="stringignorecase" offset="0:1024"/>
+          <match value="\nDelivered-To:" type="string" offset="0:1024"/>
+          <match value="\nFrom:" type="stringignorecase" offset="0:1024"/>
+          <match value="\nMIME-Version:" type="stringignorecase" offset="0:1024"/>
+          <match value="\nReceived:" type="stringignorecase" offset="0:1024"/>
+          <match value="\nRelay-Version:" type="stringignorecase" offset="0:1024"/>
+          <match value="\nReturn-Path:" type="stringignorecase" offset="0:1024"/>
+          <match value="\nSent:" type="string" offset="0:1024"/>
+          <match value="\nStatus:" type="string" offset="0:1024"/>
+          <match value="\nSubject:" type="string" offset="0:1024"/>
+          <match value="\nTo:" type="string" offset="0:1024"/>
+          <match value="\nUser-Agent:" type="string" offset="0:1024"/>
+          <match value="\nX-Mailer:" type="string" offset="0:1024"/>
+          <match value="\nX-Originating-IP:" type="stringignorecase" offset="0:1024"/>
+          <match value="\nDKIM-" type="string" offset="0:1024"/>
+          <match value="\nARC-" type="string" offset="0:1024"/>
+        </match>
       </match>
     </magic>
     <magic priority="40">
@@ -6975,7 +7182,17 @@
     <glob pattern="*.mesh"/>
     <glob pattern="*.silo"/>
   </mime-type>
-
+  <mime-type type="model/x.stl-ascii">
+    <magic priority="60">
+      <match value="solid " offset="0" type="string">
+        <match value="facet " offset="7:256" type="string"/>
+      </match>
+    </magic>
+  </mime-type>
+  <mime-type type="model/x.stl-binary">
+    <_comment>no magic available</_comment>
+    <glob pattern="*.stl"/>
+  </mime-type>
   <mime-type type="model/vnd.dwf">
     <acronym>DWF</acronym>
     <_comment>AutoCAD Design Web Format</_comment>
@@ -7134,7 +7351,7 @@
   <mime-type type="text/calendar">
     <magic priority="50">
       <match value="BEGIN:VCALENDAR" type="string" offset="0">
-        <match value="VERSION:2.0" type="string" offset="15:30"/>
+        <match value="\nVERSION:2.0" type="string" offset="15:360"/>
       </match>
     </magic>
     <glob pattern="*.ics"/>

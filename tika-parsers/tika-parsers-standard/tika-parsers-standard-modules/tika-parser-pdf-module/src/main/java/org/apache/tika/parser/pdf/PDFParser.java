@@ -16,6 +16,8 @@
  */
 package org.apache.tika.parser.pdf;
 
+import static org.apache.tika.metadata.PDF.OCR_PAGE_COUNT;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
@@ -30,6 +32,7 @@ import javax.xml.stream.XMLStreamException;
 
 import org.apache.commons.io.input.CloseShieldInputStream;
 import org.apache.commons.io.input.UnsynchronizedByteArrayInputStream;
+import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.cos.COSArray;
 import org.apache.pdfbox.cos.COSBase;
 import org.apache.pdfbox.cos.COSDictionary;
@@ -37,8 +40,10 @@ import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSObject;
 import org.apache.pdfbox.cos.COSString;
 import org.apache.pdfbox.io.MemoryUsageSetting;
-import org.apache.pdfbox.io.RandomAccessBufferedFileInputStream;
 import org.apache.pdfbox.io.RandomAccessRead;
+import org.apache.pdfbox.io.RandomAccessReadBuffer;
+import org.apache.pdfbox.io.RandomAccessReadBufferedFile;
+import org.apache.pdfbox.io.RandomAccessStreamCache;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDDocumentInformation;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -69,8 +74,8 @@ import org.apache.tika.metadata.PDF;
 import org.apache.tika.metadata.PagedText;
 import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.mime.MediaType;
-import org.apache.tika.parser.AbstractParser;
 import org.apache.tika.parser.ParseContext;
+import org.apache.tika.parser.Parser;
 import org.apache.tika.parser.PasswordProvider;
 import org.apache.tika.parser.RenderingParser;
 import org.apache.tika.parser.pdf.image.ImageGraphicsEngineFactory;
@@ -117,15 +122,8 @@ import org.apache.tika.sax.XHTMLContentHandler;
  * If your PDFs contain marked content or tags, consider
  * {@link PDFParserConfig#setExtractMarkedContent(boolean)}
  */
-public class PDFParser extends AbstractParser implements RenderingParser, Initializable {
+public class PDFParser implements Parser, RenderingParser, Initializable {
 
-    /**
-     * Metadata key for giving the document password to the parser.
-     *
-     * @since Apache Tika 0.5
-     * @deprecated Supply a {@link PasswordProvider} on the {@link ParseContext} instead
-     */
-    public static final String PASSWORD = "org.apache.tika.parser.pdf.password";
     public static final MediaType MEDIA_TYPE = MediaType.application("pdf");
     /**
      * Serial version UID
@@ -162,6 +160,8 @@ public class PDFParser extends AbstractParser implements RenderingParser, Initia
         PDFRenderingState incomingRenderingState = context.get(PDFRenderingState.class);
         TikaInputStream tstream = null;
         boolean shouldClose = false;
+        OCRPageCounter prevOCRCounter = context.get(OCRPageCounter.class);
+        context.set(OCRPageCounter.class, new OCRPageCounter());
         try {
             if (shouldSpool(localConfig)) {
                 if (stream instanceof TikaInputStream) {
@@ -180,6 +180,7 @@ public class PDFParser extends AbstractParser implements RenderingParser, Initia
 
             password = getPassword(metadata, context);
             MemoryUsageSetting memoryUsageSetting = null;
+
             if (localConfig.getMaxMainMemoryBytes() >= 0) {
                 memoryUsageSetting =
                         MemoryUsageSetting.setupMixed(localConfig.getMaxMainMemoryBytes());
@@ -187,9 +188,8 @@ public class PDFParser extends AbstractParser implements RenderingParser, Initia
                 memoryUsageSetting = MemoryUsageSetting.setupMainMemoryOnly();
             }
 
-            //TODO PDFBOX30 replace "memoryUsageSetting" with "memoryUsageSetting.streamCache"
-            pdfDocument = getPDDocument(stream, tstream, password, memoryUsageSetting, metadata,
-                    context);
+            pdfDocument = getPDDocument(stream, tstream, password,
+                    memoryUsageSetting.streamCache, metadata, context);
 
 
             boolean hasCollection = hasCollection(pdfDocument, metadata);
@@ -224,6 +224,8 @@ public class PDFParser extends AbstractParser implements RenderingParser, Initia
             metadata.set(PDF.IS_ENCRYPTED, "true");
             throw new EncryptedDocumentException(e);
         } finally {
+            metadata.set(OCR_PAGE_COUNT, context.get(OCRPageCounter.class).getCount());
+            context.set(OCRPageCounter.class, prevOCRCounter);
             //reset the incrementalUpdateRecord even if null
             context.set(IncrementalUpdateRecord.class, incomingIncrementalUpdateRecord);
             PDFRenderingState currState = context.get(PDFRenderingState.class);
@@ -296,10 +298,8 @@ public class PDFParser extends AbstractParser implements RenderingParser, Initia
         List<StartXRefOffset> xRefOffsets = new ArrayList<>();
         //TODO -- can we use the PDFBox parser's RandomAccessRead
         //so that we don't have to reopen from file?
-        //TODO PDFBOX30 replace RandomAccessBufferedFileInputStream
-        // with RandomAccessReadBufferedFile
         try (RandomAccessRead ra =
-                     new RandomAccessBufferedFileInputStream(tikaInputStream.getFile())) {
+                     new RandomAccessReadBufferedFile(tikaInputStream.getFile())) {
             StartXRefScanner xRefScanner = new StartXRefScanner(ra);
             xRefOffsets.addAll(xRefScanner.scan());
         } catch (IOException e) {
@@ -364,35 +364,29 @@ public class PDFParser extends AbstractParser implements RenderingParser, Initia
 
     private void extractSignatures(PDDocument pdfDocument, Metadata metadata) {
         boolean hasSignature = false;
-        try {
-            for (PDSignature signature : pdfDocument.getSignatureDictionaries()) {
-                if (signature == null) {
-                    continue;
-                }
-                PDMetadataExtractor.addNotNull(TikaCoreProperties.SIGNATURE_NAME,
-                        signature.getName(), metadata);
-
-                Calendar date = signature.getSignDate();
-                if (date != null) {
-                    metadata.add(TikaCoreProperties.SIGNATURE_DATE, date);
-                }
-                PDMetadataExtractor.addNotNull(TikaCoreProperties.SIGNATURE_CONTACT_INFO,
-                        signature.getContactInfo(), metadata);
-                PDMetadataExtractor.addNotNull(TikaCoreProperties.SIGNATURE_FILTER,
-                        signature.getFilter(), metadata);
-                PDMetadataExtractor.addNotNull(TikaCoreProperties.SIGNATURE_LOCATION,
-                        signature.getLocation(), metadata);
-                PDMetadataExtractor.addNotNull(TikaCoreProperties.SIGNATURE_REASON,
-                        signature.getReason(), metadata);
-                hasSignature = true;
-                //TODO PDFBOX30 remove this segment and the exception handling after migration
-                if (false != false) {
-                    throw new IOException();
-                }
+        for (PDSignature signature : pdfDocument.getSignatureDictionaries()) {
+            if (signature == null) {
+                continue;
             }
-        } catch (IOException e) {
-            //swallow
+            PDMetadataExtractor.addNotNull(TikaCoreProperties.SIGNATURE_NAME, signature.getName(),
+                    metadata);
+
+            Calendar date = signature.getSignDate();
+            if (date != null) {
+                metadata.add(TikaCoreProperties.SIGNATURE_DATE, date);
+            }
+            PDMetadataExtractor.addNotNull(TikaCoreProperties.SIGNATURE_CONTACT_INFO,
+                    signature.getContactInfo(), metadata);
+            PDMetadataExtractor.addNotNull(TikaCoreProperties.SIGNATURE_FILTER,
+                    signature.getFilter(), metadata);
+            PDMetadataExtractor.addNotNull(TikaCoreProperties.SIGNATURE_LOCATION,
+                    signature.getLocation(), metadata);
+            PDMetadataExtractor.addNotNull(TikaCoreProperties.SIGNATURE_REASON,
+                    signature.getReason(), metadata);
+            hasSignature = true;
+
         }
+
         if (hasSignature) {
             metadata.set(TikaCoreProperties.HAS_SIGNATURE, hasSignature);
         }
@@ -460,10 +454,9 @@ public class PDFParser extends AbstractParser implements RenderingParser, Initia
                 tstream, metadata, parseContext, PageRangeRequest.RENDER_ALL);
     }
 
-    //TODO PDFBOX30 replace "MemoryUsageSetting memoryUsageSetting" with
-    // "StreamCacheCreateFunction streamCacheCreateFunction"
     protected PDDocument getPDDocument(InputStream stream, TikaInputStream tstream, String password,
-                                       MemoryUsageSetting memoryUsageSetting, Metadata metadata,
+                                       RandomAccessStreamCache.StreamCacheCreateFunction streamCacheCreateFunction,
+                                       Metadata metadata,
                                        ParseContext context)
             throws IOException, EncryptedDocumentException {
         try {
@@ -471,11 +464,11 @@ public class PDFParser extends AbstractParser implements RenderingParser, Initia
             if (tstream != null && tstream.hasFile()) {
                 // File based -- send file directly to PDFBox
                 pdDocument =
-                        getPDDocument(tstream.getPath(), password, memoryUsageSetting, metadata,
+                        getPDDocument(tstream.getPath(), password, streamCacheCreateFunction, metadata,
                                 context);
             } else {
                 pdDocument = getPDDocument(CloseShieldInputStream.wrap(stream), password,
-                        memoryUsageSetting, metadata, context);
+                        streamCacheCreateFunction, metadata, context);
             }
             if (tstream != null) {
                 tstream.setOpenContainer(pdDocument);
@@ -490,20 +483,18 @@ public class PDFParser extends AbstractParser implements RenderingParser, Initia
         }
     }
 
-    //TODO PDFBOX30 replace "MemoryUsageSetting memoryUsageSetting" with
-    // "StreamCacheCreateFunction streamCacheCreateFunction"
     protected PDDocument getPDDocument(InputStream inputStream, String password,
-                                       MemoryUsageSetting memoryUsageSetting, Metadata metadata,
+                                       RandomAccessStreamCache.StreamCacheCreateFunction streamCacheCreateFunction,
+                                       Metadata metadata,
                                        ParseContext parseContext) throws IOException {
-        return PDDocument.load(inputStream, password, memoryUsageSetting);
+        return Loader.loadPDF(new RandomAccessReadBuffer(inputStream), password, streamCacheCreateFunction);
     }
 
-    //TODO PDFBOX30 replace "MemoryUsageSetting memoryUsageSetting" with
-    // "StreamCacheCreateFunction streamCacheCreateFunction"
     protected PDDocument getPDDocument(Path path, String password,
-                                       MemoryUsageSetting memoryUsageSetting, Metadata metadata,
+                                       RandomAccessStreamCache.StreamCacheCreateFunction
+                                        streamCacheCreateFunction, Metadata metadata,
                                        ParseContext parseContext) throws IOException {
-        return PDDocument.load(path.toFile(), password, memoryUsageSetting);
+        return Loader.loadPDF(path.toFile(), password, streamCacheCreateFunction);
     }
 
     private boolean hasMarkedContent(PDDocument pdDocument, Metadata metadata) {
@@ -552,15 +543,10 @@ public class PDFParser extends AbstractParser implements RenderingParser, Initia
     private String getPassword(Metadata metadata, ParseContext context) {
         String password = null;
 
-        // Did they supply a new style Password Provider?
+        // Did they supply a Password Provider?
         PasswordProvider passwordProvider = context.get(PasswordProvider.class);
         if (passwordProvider != null) {
             password = passwordProvider.getPassword(metadata);
-        }
-
-        // Fall back on the old style metadata if set
-        if (password == null && metadata.get(PASSWORD) != null) {
-            password = metadata.get(PASSWORD);
         }
 
         // If no password is given, use an empty string as the default
@@ -587,8 +573,8 @@ public class PDFParser extends AbstractParser implements RenderingParser, Initia
         metadata.set(AccessPermissions.CAN_MODIFY_ANNOTATIONS,
                 Boolean.toString(ap.canModifyAnnotations()));
         metadata.set(AccessPermissions.CAN_PRINT, Boolean.toString(ap.canPrint()));
-        //TODO PDFBOX30 replace "CAN_PRINT_DEGRADED" with "CAN_PRINT_FAITHFUL"
-        metadata.set(AccessPermissions.CAN_PRINT_DEGRADED, Boolean.toString(ap.canPrintFaithful()));
+        metadata.set(AccessPermissions.CAN_PRINT_FAITHFUL,
+                Boolean.toString(ap.canPrintFaithful()));
         metadata.set(PDF.IS_ENCRYPTED, Boolean.toString(document.isEncrypted()));
 
         if (document.getDocumentCatalog().getLanguage() != null) {
@@ -714,8 +700,8 @@ public class PDFParser extends AbstractParser implements RenderingParser, Initia
         XFAExtractor ex = new XFAExtractor();
         XHTMLContentHandler xhtml = new XHTMLContentHandler(handler, metadata);
         xhtml.startDocument();
-        try (InputStream is = new UnsynchronizedByteArrayInputStream(
-                pdDocument.getDocumentCatalog().getAcroForm(null).getXFA().getBytes())) {
+        try (InputStream is = 
+                UnsynchronizedByteArrayInputStream.builder().setByteArray(pdDocument.getDocumentCatalog().getAcroForm(null).getXFA().getBytes()).get()) {
             ex.extract(is, xhtml, metadata, context);
         } catch (XMLStreamException e) {
             throw new TikaException("XML error in XFA", e);
@@ -752,7 +738,6 @@ public class PDFParser extends AbstractParser implements RenderingParser, Initia
     /**
      * If true, text in annotations will be extracted.
      *
-     * @deprecated use {@link #getPDFParserConfig()}
      */
     public boolean isExtractAnnotationText() {
         return defaultConfig.isExtractAnnotationText();
@@ -769,7 +754,6 @@ public class PDFParser extends AbstractParser implements RenderingParser, Initia
 
     /**
      * @see #setSuppressDuplicateOverlappingText(boolean)
-     * @deprecated use {@link #getPDFParserConfig()}
      */
     public boolean isSuppressDuplicateOverlappingText() {
         return defaultConfig.isSuppressDuplicateOverlappingText();
@@ -791,7 +775,6 @@ public class PDFParser extends AbstractParser implements RenderingParser, Initia
 
     /**
      * @see #setSortByPosition(boolean)
-     * @deprecated use {@link #getPDFParserConfig()}
      */
     public boolean isSortByPosition() {
         return defaultConfig.isSortByPosition();
@@ -1116,7 +1099,7 @@ public class PDFParser extends AbstractParser implements RenderingParser, Initia
         //set a default renderer if nothing was defined
         PDFBoxRenderer pdfBoxRenderer = new PDFBoxRenderer();
         pdfBoxRenderer.setDPI(config.getOcrDPI());
-        pdfBoxRenderer.setImageType(config.getOcrImageType());
+        pdfBoxRenderer.setImageType(config.getOcrImageType().getImageType());
         pdfBoxRenderer.setImageFormatName(config.getOcrImageFormatName());
         config.setRenderer(pdfBoxRenderer);
     }

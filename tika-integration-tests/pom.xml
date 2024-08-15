@@ -56,12 +56,11 @@
     <dependency>
       <groupId>org.junit.vintage</groupId>
       <artifactId>junit-vintage-engine</artifactId>
-      <version>${junit5.version}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
 
   <scm>
-    <tag>2.2.1-rc2</tag>
+    <tag>3.0.0-BETA2-rc1</tag>
   </scm>
 </project>

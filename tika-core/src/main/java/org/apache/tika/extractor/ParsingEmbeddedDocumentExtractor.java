@@ -56,12 +56,13 @@ public class ParsingEmbeddedDocumentExtractor implements EmbeddedDocumentExtract
 
     private boolean writeFileNameToContent = true;
 
-    private final ParseContext context;
+    protected final ParseContext context;
 
     public ParsingEmbeddedDocumentExtractor(ParseContext context) {
         this.context = context;
     }
 
+    @Override
     public boolean shouldParseEmbedded(Metadata metadata) {
         DocumentSelector selector = context.get(DocumentSelector.class);
         if (selector != null) {
@@ -79,6 +80,7 @@ public class ParsingEmbeddedDocumentExtractor implements EmbeddedDocumentExtract
         return true;
     }
 
+    @Override
     public void parseEmbedded(
             InputStream stream, ContentHandler handler, Metadata metadata, boolean outputHtml)
             throws SAXException, IOException {
@@ -123,7 +125,7 @@ public class ParsingEmbeddedDocumentExtractor implements EmbeddedDocumentExtract
         }
     }
 
-    private void recordException(Exception e, ParseContext context) {
+    void recordException(Exception e, ParseContext context) {
         ParseRecord record = context.get(ParseRecord.class);
         if (record == null) {
             return;
@@ -137,5 +139,9 @@ public class ParsingEmbeddedDocumentExtractor implements EmbeddedDocumentExtract
 
     public void setWriteFileNameToContent(boolean writeFileNameToContent) {
         this.writeFileNameToContent = writeFileNameToContent;
+    }
+
+    public boolean isWriteFileNameToContent() {
+        return writeFileNameToContent;
     }
 }

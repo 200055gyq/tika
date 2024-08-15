@@ -51,13 +51,11 @@
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>
-      <version>${junit5.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-engine</artifactId>
-      <version>${junit5.version}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -113,6 +111,6 @@
   </build>
 
   <scm>
-    <tag>2.2.1-rc2</tag>
+    <tag>3.0.0-BETA2-rc1</tag>
   </scm>
 </project>

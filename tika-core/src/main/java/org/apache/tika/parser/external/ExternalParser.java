@@ -17,7 +17,6 @@
 package org.apache.tika.parser.external;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.apache.commons.io.output.NullOutputStream.NULL_OUTPUT_STREAM;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -38,6 +37,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.output.NullOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.ContentHandler;
@@ -48,15 +48,15 @@ import org.apache.tika.io.TemporaryResources;
 import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.mime.MediaType;
-import org.apache.tika.parser.AbstractParser;
 import org.apache.tika.parser.ParseContext;
+import org.apache.tika.parser.Parser;
 import org.apache.tika.sax.XHTMLContentHandler;
 
 /**
  * Parser that uses an external program (like catdoc or pdf2txt) to extract
  * text content and metadata from a given document.
  */
-public class ExternalParser extends AbstractParser {
+public class ExternalParser implements Parser {
 
     private static final Logger LOG = LoggerFactory.getLogger(ExternalParser.class);
 
@@ -122,7 +122,7 @@ public class ExternalParser extends AbstractParser {
     private static Thread ignoreStream(final InputStream stream, boolean waitForDeath) {
         Thread t = new Thread(() -> {
             try {
-                IOUtils.copy(stream, NULL_OUTPUT_STREAM);
+                IOUtils.copy(stream, NullOutputStream.INSTANCE);
             } catch (IOException e) {
                 //swallow
             } finally {

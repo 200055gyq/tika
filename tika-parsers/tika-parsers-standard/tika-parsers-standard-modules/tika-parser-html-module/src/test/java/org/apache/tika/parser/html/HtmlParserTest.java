@@ -1055,7 +1055,7 @@ public class HtmlParserTest extends TikaTest {
         }
 
         assertEquals(1, (int) tagFrequencies.get("title"));
-        assertEquals(9, (int) tagFrequencies.get("meta"));
+        assertEquals(11, (int) tagFrequencies.get("meta"));
         assertEquals(12, (int) tagFrequencies.get("link"));
         assertEquals(6, (int) tagFrequencies.get("script"));
     }
@@ -1087,6 +1087,13 @@ public class HtmlParserTest extends TikaTest {
     @Test
     public void testGoodScript() throws Exception {
         String xml = getXML("testHTMLGoodScript.html").xml;
+        assertContains("This is a test", xml);
+        assertNotContained("cool", xml);
+    }
+
+    @Test
+    public void testScriptInBody() throws Exception {
+        String xml = getXML("testHTML_script_in_body.html").xml;
         assertContains("This is a test", xml);
         assertNotContained("cool", xml);
     }

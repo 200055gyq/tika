@@ -45,6 +45,7 @@
     <module>tika-batch</module>
     <module>tika-langdetect</module>
     <module>tika-pipes</module>
+    <module>tika-grpc</module>
     <module>tika-app</module>
     <module>tika-server</module>
     <module>tika-integration-tests</module>
@@ -55,8 +56,6 @@
     <module>tika-java7</module>
     <module>tika-detectors</module>
     <module>tika-handlers</module>
-    <module>tika-parsers/tika-parsers-extended/tika-parser-tagsoup-module</module>
-    <module>tika-parsers/tika-parsers-extended/tika-parser-tagsoup-package</module>
   </modules>
 
   <profiles>
@@ -218,6 +217,6 @@ least three +1 Tika PMC votes are cast.
   </ciManagement>
 
   <scm>
-    <tag>2.2.1-rc2</tag>
+    <tag>3.0.0-BETA2-rc1</tag>
   </scm>
 </project>

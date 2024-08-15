@@ -25,6 +25,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -49,7 +50,6 @@ import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.mime.MediaType;
 import org.apache.tika.mime.MediaTypeRegistry;
-import org.apache.tika.parser.AbstractParser;
 import org.apache.tika.parser.CompositeParser;
 import org.apache.tika.parser.ParseContext;
 import org.apache.tika.parser.Parser;
@@ -64,7 +64,7 @@ import org.apache.tika.sax.XHTMLContentHandler;
  * <p>See https://wiki.apache.org/tika/PooledTimeSeriesParser for
  * more details and setup instructions.
  */
-public class PooledTimeSeriesParser extends AbstractParser {
+public class PooledTimeSeriesParser implements Parser {
 
     static final boolean isAvailable =
             ExternalParser.check(new String[]{"pooled-time-series", "--help"}, -1);
@@ -157,13 +157,13 @@ public class PooledTimeSeriesParser extends AbstractParser {
     private String computePoT(File input) throws IOException {
 
         CommandLine cmdLine = new CommandLine("pooled-time-series");
-        try (UnsynchronizedByteArrayOutputStream outputStream = new UnsynchronizedByteArrayOutputStream()) {
+        try (UnsynchronizedByteArrayOutputStream outputStream = UnsynchronizedByteArrayOutputStream.builder().get()) {
             cmdLine.addArgument("-f");
             cmdLine.addArgument(input.getAbsolutePath());
             LOG.trace("Executing: {}", cmdLine);
-            DefaultExecutor exec = new DefaultExecutor();
+            DefaultExecutor exec = DefaultExecutor.builder().get();
             exec.setExitValue(0);
-            ExecuteWatchdog watchdog = new ExecuteWatchdog(60000);
+            ExecuteWatchdog watchdog = ExecuteWatchdog.builder().setTimeout(Duration.ofMillis(60000)).get();
             exec.setWatchdog(watchdog);
             PumpStreamHandler streamHandler = new PumpStreamHandler(outputStream);
             exec.setStreamHandler(streamHandler);

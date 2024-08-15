@@ -32,9 +32,10 @@ import org.apache.tika.config.Param;
 import org.apache.tika.exception.TikaConfigException;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.metadata.Metadata;
+import org.apache.tika.metadata.Property;
 import org.apache.tika.mime.MediaType;
-import org.apache.tika.parser.AbstractParser;
 import org.apache.tika.parser.ParseContext;
+import org.apache.tika.parser.Parser;
 
 /**
  * This is the main class for parsing SQLite3 files.  When {@link #parse} is called,
@@ -52,7 +53,21 @@ import org.apache.tika.parser.ParseContext;
  * If using a TikaInputStream, make sure to close it to delete the temp file
  * that has to be created.
  */
-public class SQLite3Parser extends AbstractParser implements Initializable {
+public class SQLite3Parser implements Parser, Initializable {
+
+    public static final String SQLITE3_PREFIX = "sqlite3:";
+
+    /**
+     * Base16 encoded integer representing the "application id"
+     */
+    public static final Property SQLITE_APPLICATION_ID =
+            Property.internalText(SQLITE3_PREFIX + "application_id");
+
+    /**
+     * Base16 encoded integer representing the "user version"
+     */
+    public static final Property SQLITE_USER_VERSION =
+            Property.internalText(SQLITE3_PREFIX + "user_version");
 
     /**
      * Serial version UID

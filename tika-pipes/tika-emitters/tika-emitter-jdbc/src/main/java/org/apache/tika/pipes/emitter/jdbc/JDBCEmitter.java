@@ -50,6 +50,7 @@ import org.apache.tika.config.InitializableProblemHandler;
 import org.apache.tika.config.Param;
 import org.apache.tika.exception.TikaConfigException;
 import org.apache.tika.metadata.Metadata;
+import org.apache.tika.parser.ParseContext;
 import org.apache.tika.pipes.emitter.AbstractEmitter;
 import org.apache.tika.pipes.emitter.EmitData;
 import org.apache.tika.pipes.emitter.EmitKey;
@@ -263,7 +264,7 @@ public class JDBCEmitter extends AbstractEmitter implements Initializable, Close
      * @throws TikaEmitterException
      */
     @Override
-    public void emit(String emitKey, List<Metadata> metadataList)
+    public void emit(String emitKey, List<Metadata> metadataList, ParseContext parseContext)
             throws IOException, TikaEmitterException {
         if (metadataList == null || metadataList.size() < 1) {
             return;
@@ -304,7 +305,17 @@ public class JDBCEmitter extends AbstractEmitter implements Initializable, Close
                 insertAll(d.getEmitKey().getEmitKey(), d.getMetadataList());
             }
         }
-        insertStatement.executeBatch();
+        if (LOGGER.isDebugEnabled()) {
+            long start = System.currentTimeMillis();
+            insertStatement.executeBatch();
+            connection.commit();
+            LOGGER.debug("took {}ms to insert {} rows ", System.currentTimeMillis() - start,
+                    emitData.size());
+        } else {
+            insertStatement.executeBatch();
+            connection.commit();
+        }
+
     }
 
     private void insertAll(String emitKey, List<Metadata> metadataList) throws SQLException {
@@ -324,10 +335,6 @@ public class JDBCEmitter extends AbstractEmitter implements Initializable, Close
     private void insertFirstOnly(String emitKey, List<Metadata> metadataList) throws SQLException {
         insertStatement.clearParameters();
         int i = 0;
-        DateFormat[] dateFormats = new DateFormat[TIKA_DATE_PATTERNS.length];
-        for (int j = 0; j < TIKA_DATE_PATTERNS.length; j++) {
-            dateFormats[i] = new SimpleDateFormat(TIKA_DATE_PATTERNS[j], Locale.US);
-        }
         insertStatement.setString(++i, emitKey);
         for (ColumnDefinition columnDefinition : columns) {
             updateValue(emitKey, insertStatement, ++i, columnDefinition, 0, metadataList);
@@ -361,6 +368,7 @@ public class JDBCEmitter extends AbstractEmitter implements Initializable, Close
 
         if (connection != null) {
             try {
+                connection.commit();
                 connection.close();
             } catch (SQLException e) {
                 LOGGER.warn("exception closing connection", e);
@@ -370,6 +378,7 @@ public class JDBCEmitter extends AbstractEmitter implements Initializable, Close
 
     private void createConnection() throws SQLException {
         connection = DriverManager.getConnection(connectionString);
+        connection.setAutoCommit(false);
         if (postConnectionString.isPresent()) {
             try (Statement st = connection.createStatement()) {
                 st.execute(postConnectionString.get());
@@ -605,7 +614,7 @@ public class JDBCEmitter extends AbstractEmitter implements Initializable, Close
     private static class StringNormalizer {
 
         String normalize(String emitKey, String columnName, String s, int maxLength) {
-            if (maxLength < 0 || s.length() < maxLength) {
+            if (maxLength < 0 || s.length() <= maxLength) {
                 return s;
             }
             LOGGER.warn("truncating {}->'{}' from {} chars to {} chars",

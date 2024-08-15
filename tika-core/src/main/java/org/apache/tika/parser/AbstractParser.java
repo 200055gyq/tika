@@ -29,8 +29,10 @@ import org.apache.tika.metadata.Metadata;
  * Abstract base class for new parsers. This method implements the old
  * deprecated parse method so subclasses won't have to.
  *
+ * @deprecated for removal in 4.x
  * @since Apache Tika 0.10
  */
+@Deprecated
 public abstract class AbstractParser implements Parser {
 
     /**
@@ -49,6 +51,7 @@ public abstract class AbstractParser implements Parser {
      * @deprecated use the {@link Parser#parse(InputStream, ContentHandler,
      * Metadata, ParseContext)} method instead
      */
+    @Deprecated
     public void parse(InputStream stream, ContentHandler handler, Metadata metadata)
             throws IOException, SAXException, TikaException {
         parse(stream, handler, metadata, new ParseContext());

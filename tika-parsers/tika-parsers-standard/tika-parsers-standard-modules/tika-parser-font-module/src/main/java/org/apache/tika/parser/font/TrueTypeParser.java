@@ -21,10 +21,14 @@ import java.io.InputStream;
 import java.util.Collections;
 import java.util.Set;
 
+import org.apache.commons.io.input.CloseShieldInputStream;
 import org.apache.fontbox.ttf.NameRecord;
 import org.apache.fontbox.ttf.NamingTable;
 import org.apache.fontbox.ttf.TTFParser;
 import org.apache.fontbox.ttf.TrueTypeFont;
+import org.apache.pdfbox.io.RandomAccessRead;
+import org.apache.pdfbox.io.RandomAccessReadBuffer;
+import org.apache.pdfbox.io.RandomAccessReadBufferedFile;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
 
@@ -33,14 +37,14 @@ import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.mime.MediaType;
-import org.apache.tika.parser.AbstractParser;
 import org.apache.tika.parser.ParseContext;
+import org.apache.tika.parser.Parser;
 import org.apache.tika.sax.XHTMLContentHandler;
 
 /**
  * Parser for TrueType font files (TTF).
  */
-public class TrueTypeParser extends AbstractParser {
+public class TrueTypeParser implements Parser {
 
     /**
      * Serial version UID
@@ -63,11 +67,15 @@ public class TrueTypeParser extends AbstractParser {
         TrueTypeFont font = null;
         try {
             TTFParser parser = new TTFParser();
-            //TODO PDFBOX30 use new RandomAccessReadBufferedFile and new RandomAccessReadBuffer
             if (tis != null && tis.hasFile()) {
-                font = parser.parse(tis.getFile());
+                try (RandomAccessRead rar = new RandomAccessReadBufferedFile(tis.getFile())) {
+                    font = parser.parse(rar);
+                }
             } else {
-                font = parser.parse(stream);
+                try (RandomAccessRead rar =
+                             new RandomAccessReadBuffer(CloseShieldInputStream.wrap(tis))) {
+                    font = parser.parse(rar);
+                }
             }
 
             // Report the details of the font

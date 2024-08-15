@@ -40,7 +40,7 @@ import org.apache.tika.parser.multiple.FallbackParser;
  * <p>To decorate several different parsers at the same time, wrap them in
  * a {@link CompositeParser} instance first.
  */
-public class ParserDecorator extends AbstractParser {
+public class ParserDecorator implements Parser {
 
     /**
      * Serial version UID
@@ -120,6 +120,7 @@ public class ParserDecorator extends AbstractParser {
      *
      * @deprecated This has been replaced by {@link FallbackParser}
      */
+    @Deprecated
     public static final Parser withFallbacks(final Collection<? extends Parser> parsers,
                                              final Set<MediaType> types) {
         // Delegate to the new FallbackParser for now, until people upgrade

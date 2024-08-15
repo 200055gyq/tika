@@ -28,7 +28,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.sis.internal.util.CheckedArrayList;
 import org.apache.sis.metadata.iso.DefaultMetadata;
 import org.apache.sis.metadata.iso.DefaultMetadataScope;
 import org.apache.sis.metadata.iso.constraint.DefaultLegalConstraints;
@@ -40,6 +39,7 @@ import org.apache.sis.storage.DataStoreException;
 import org.apache.sis.storage.DataStores;
 import org.apache.sis.storage.UnsupportedStorageException;
 import org.apache.sis.util.collection.CodeListSet;
+import org.apache.sis.util.internal.CheckedArrayList;
 import org.opengis.metadata.Identifier;
 import org.opengis.metadata.citation.Citation;
 import org.opengis.metadata.citation.CitationDate;
@@ -67,13 +67,13 @@ import org.apache.tika.io.TemporaryResources;
 import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.mime.MediaType;
-import org.apache.tika.parser.AbstractParser;
 import org.apache.tika.parser.ParseContext;
+import org.apache.tika.parser.Parser;
 import org.apache.tika.sax.XHTMLContentHandler;
 import org.apache.tika.utils.DateUtils;
 
 
-public class GeographicInformationParser extends AbstractParser {
+public class GeographicInformationParser implements Parser {
 
     public static final String geoInfoType = "text/iso19139+xml";
     private static final Logger LOG = LoggerFactory.getLogger(GeographicInformationParser.class);
@@ -90,18 +90,14 @@ public class GeographicInformationParser extends AbstractParser {
     public void parse(InputStream inputStream, ContentHandler contentHandler, Metadata metadata,
                       ParseContext parseContext) throws IOException, SAXException, TikaException {
         metadata.set(Metadata.CONTENT_TYPE, geoInfoType);
-        DataStore dataStore = null;
-        DefaultMetadata defaultMetadata = null;
         XHTMLContentHandler xhtmlContentHandler = new XHTMLContentHandler(contentHandler, metadata);
 
         TemporaryResources tmp =
                 TikaInputStream.isTikaInputStream(inputStream) ? null : new TemporaryResources();
-        try {
-            TikaInputStream tikaInputStream = TikaInputStream.get(inputStream, tmp, metadata);
+        try (TikaInputStream tikaInputStream = TikaInputStream.get(inputStream, tmp, metadata)) {
             File file = tikaInputStream.getFile();
-            dataStore = DataStores.open(file);
-            defaultMetadata = new DefaultMetadata(dataStore.getMetadata());
-            if (defaultMetadata != null) {
+            try (DataStore dataStore = DataStores.open(file)) {
+                DefaultMetadata defaultMetadata = new DefaultMetadata(dataStore.getMetadata());
                 extract(xhtmlContentHandler, metadata, defaultMetadata);
             }
 

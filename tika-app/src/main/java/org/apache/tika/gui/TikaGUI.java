@@ -75,9 +75,7 @@ import org.apache.tika.extractor.DocumentSelector;
 import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.TikaCoreProperties;
-import org.apache.tika.metadata.serialization.JsonMetadataList;
 import org.apache.tika.mime.MediaType;
-import org.apache.tika.parser.AbstractParser;
 import org.apache.tika.parser.AutoDetectParser;
 import org.apache.tika.parser.DigestingParser;
 import org.apache.tika.parser.ParseContext;
@@ -91,6 +89,7 @@ import org.apache.tika.sax.RecursiveParserWrapperHandler;
 import org.apache.tika.sax.TeeContentHandler;
 import org.apache.tika.sax.XHTMLContentHandler;
 import org.apache.tika.sax.boilerpipe.BoilerpipeContentHandler;
+import org.apache.tika.serialization.JsonMetadataList;
 
 /**
  * Simple Swing GUI for Apache Tika. You can drag and drop files on top
@@ -199,9 +198,8 @@ public class TikaGUI extends JFrame implements ActionListener, HyperlinkListener
         UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         final TikaConfig finalConfig = config;
         SwingUtilities.invokeLater(() -> new TikaGUI(
-                new DigestingParser(new AutoDetectParser(finalConfig),
-                        new CommonsDigester(MAX_MARK, CommonsDigester.DigestAlgorithm.MD5,
-                                CommonsDigester.DigestAlgorithm.SHA256), false)).setVisible(true));
+                new DigestingParser(new AutoDetectParser(finalConfig), new CommonsDigester(MAX_MARK, CommonsDigester.DigestAlgorithm.MD5, CommonsDigester.DigestAlgorithm.SHA256),
+                        false)).setVisible(true));
     }
 
     private void addMenuBar() {
@@ -249,15 +247,16 @@ public class TikaGUI extends JFrame implements ActionListener, HyperlinkListener
                 openFile(chooser.getSelectedFile());
             }
         } else if ("openurl".equals(command)) {
-            Object rv = JOptionPane
-                    .showInputDialog(this, "Enter the URL of the resource to be parsed:",
-                            "Open URL", JOptionPane.PLAIN_MESSAGE, null, null, "");
-            if (rv != null && rv.toString().length() > 0) {
+            Object rv = JOptionPane.showInputDialog(this, "Enter the URL of the resource to be parsed:", "Open URL", JOptionPane.PLAIN_MESSAGE, null, null, "");
+            if (rv != null && rv
+                    .toString()
+                    .length() > 0) {
                 try {
-                    openURL(new URL(rv.toString().trim()));
+                    openURL(new URL(rv
+                            .toString()
+                            .trim()));
                 } catch (MalformedURLException exception) {
-                    JOptionPane.showMessageDialog(this, "The given string is not a valid URL",
-                            "Invalid URL", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "The given string is not a valid URL", "Invalid URL", JOptionPane.ERROR_MESSAGE);
                 }
             }
         } else if ("html".equals(command)) {
@@ -275,7 +274,9 @@ public class TikaGUI extends JFrame implements ActionListener, HyperlinkListener
         } else if ("about".equals(command)) {
             textDialog("About Apache Tika", TikaGUI.class.getResource("about.html"));
         } else if ("exit".equals(command)) {
-            Toolkit.getDefaultToolkit().getSystemEventQueue()
+            Toolkit
+                    .getDefaultToolkit()
+                    .getSystemEventQueue()
                     .postEvent(new WindowEvent(this, WindowEvent.WINDOW_CLOSING));
         }
     }
@@ -283,7 +284,7 @@ public class TikaGUI extends JFrame implements ActionListener, HyperlinkListener
     public void openFile(File file) {
         try {
             Metadata metadata = new Metadata();
-            try (TikaInputStream stream = TikaInputStream.get(file, metadata)) {
+            try (TikaInputStream stream = TikaInputStream.get(file.toPath(), metadata)) {
                 handleStream(stream, metadata);
             }
         } catch (Throwable t) {
@@ -310,8 +311,7 @@ public class TikaGUI extends JFrame implements ActionListener, HyperlinkListener
         StringBuilder metadataBuffer = new StringBuilder();
 
         ContentHandler handler =
-                new TeeContentHandler(getHtmlHandler(htmlBuffer), getTextContentHandler(textBuffer),
-                        getTextMainContentHandler(textMainBuffer), getXmlContentHandler(xmlBuffer));
+                new TeeContentHandler(getHtmlHandler(htmlBuffer), getTextContentHandler(textBuffer), getTextMainContentHandler(textMainBuffer), getXmlContentHandler(xmlBuffer));
 
         context.set(DocumentSelector.class, new ImageDocumentSelector());
 
@@ -364,14 +364,12 @@ public class TikaGUI extends JFrame implements ActionListener, HyperlinkListener
             input.reset();
             isReset = true;
         } catch (IOException e) {
-            setText(json, "Error during stream reset.\n" + "There's a limit of " + MAX_MARK +
-                    " bytes for this type of processing in the GUI.\n" +
+            setText(json, "Error during stream reset.\n" + "There's a limit of " + MAX_MARK + " bytes for this type of processing in the GUI.\n" +
                     "Try the app with command line argument of -J.");
         }
         if (isReset) {
             RecursiveParserWrapperHandler recursiveParserWrapperHandler =
-                    new RecursiveParserWrapperHandler(new BasicContentHandlerFactory(
-                            BasicContentHandlerFactory.HANDLER_TYPE.BODY, -1), -1);
+                    new RecursiveParserWrapperHandler(new BasicContentHandlerFactory(BasicContentHandlerFactory.HANDLER_TYPE.BODY, -1), -1);
             RecursiveParserWrapper wrapper = new RecursiveParserWrapper(parser);
             wrapper.parse(input, recursiveParserWrapperHandler, new Metadata(), new ParseContext());
             StringWriter jsonBuffer = new StringWriter();
@@ -385,7 +383,10 @@ public class TikaGUI extends JFrame implements ActionListener, HyperlinkListener
     private void handleError(String name, Throwable t) {
         StringWriter writer = new StringWriter();
         writer.append("Apache Tika was unable to parse the document\n");
-        writer.append("at ").append(name).append(".\n\n");
+        writer
+                .append("at ")
+                .append(name)
+                .append(".\n\n");
         writer.append("The full exception stack trace is included below:\n\n");
         t.printStackTrace(new PrintWriter(writer));
 
@@ -407,8 +408,7 @@ public class TikaGUI extends JFrame implements ActionListener, HyperlinkListener
             editor.setContentType("text/html");
             editor.setEditable(false);
             editor.setBackground(Color.WHITE);
-            editor.setTransferHandler(
-                    new ParsingTransferHandler(editor.getTransferHandler(), this));
+            editor.setTransferHandler(new ParsingTransferHandler(editor.getTransferHandler(), this));
             panel.add(new JScrollPane(editor), name);
         } catch (IOException e) {
             e.printStackTrace();
@@ -446,8 +446,7 @@ public class TikaGUI extends JFrame implements ActionListener, HyperlinkListener
             try {
                 URL url = e.getURL();
                 try (InputStream stream = url.openStream()) {
-                    JEditorPane editor =
-                            new JEditorPane("text/plain", IOUtils.toString(stream, UTF_8));
+                    JEditorPane editor = new JEditorPane("text/plain", IOUtils.toString(stream, UTF_8));
                     editor.setEditable(false);
                     editor.setBackground(Color.WHITE);
                     editor.setCaretPosition(0);
@@ -496,12 +495,13 @@ public class TikaGUI extends JFrame implements ActionListener, HyperlinkListener
     private ContentHandler getHtmlHandler(Writer writer) throws TransformerConfigurationException {
         SAXTransformerFactory factory = (SAXTransformerFactory) SAXTransformerFactory.newInstance();
         TransformerHandler handler = factory.newTransformerHandler();
-        handler.getTransformer().setOutputProperty(OutputKeys.METHOD, "html");
+        handler
+                .getTransformer()
+                .setOutputProperty(OutputKeys.METHOD, "html");
         handler.setResult(new StreamResult(writer));
         return new ContentHandlerDecorator(handler) {
             @Override
-            public void startElement(String uri, String localName, String name, Attributes atts)
-                    throws SAXException {
+            public void startElement(String uri, String localName, String name, Attributes atts) throws SAXException {
                 if (XHTMLContentHandler.XHTML.equals(uri)) {
                     uri = null;
                 }
@@ -521,11 +521,12 @@ public class TikaGUI extends JFrame implements ActionListener, HyperlinkListener
                                     String filename = src.substring(src.indexOf(':') + 1);
                                     try {
                                         File img = imageParser.requestSave(filename);
-                                        String newSrc = img.toURI().toString();
+                                        String newSrc = img
+                                                .toURI()
+                                                .toString();
                                         newAttrs.setValue(i, newSrc);
                                     } catch (IOException e) {
-                                        System.err.println(
-                                                "Error creating temp image file " + filename);
+                                        System.err.println("Error creating temp image file " + filename);
                                         // The html viewer will show a broken image too to alert them
                                     }
                                 }
@@ -566,11 +567,12 @@ public class TikaGUI extends JFrame implements ActionListener, HyperlinkListener
         return new BoilerpipeContentHandler(writer);
     }
 
-    private ContentHandler getXmlContentHandler(Writer writer)
-            throws TransformerConfigurationException {
+    private ContentHandler getXmlContentHandler(Writer writer) throws TransformerConfigurationException {
         SAXTransformerFactory factory = (SAXTransformerFactory) SAXTransformerFactory.newInstance();
         TransformerHandler handler = factory.newTransformerHandler();
-        handler.getTransformer().setOutputProperty(OutputKeys.METHOD, "xml");
+        handler
+                .getTransformer()
+                .setOutputProperty(OutputKeys.METHOD, "xml");
         handler.setResult(new StreamResult(writer));
         return handler;
     }
@@ -590,7 +592,7 @@ public class TikaGUI extends JFrame implements ActionListener, HyperlinkListener
      * directory, and delegates everything else to another downstream
      * parser.
      */
-    private static class ImageSavingParser extends AbstractParser {
+    private static class ImageSavingParser implements Parser {
         private Map<String, File> wanted = new HashMap<>();
         private Parser downstreamParser;
         private File tmpDir;
@@ -599,7 +601,9 @@ public class TikaGUI extends JFrame implements ActionListener, HyperlinkListener
             this.downstreamParser = downstreamParser;
 
             try {
-                File t = Files.createTempFile("tika", ".test").toFile();
+                File t = Files
+                        .createTempFile("tika", ".test")
+                        .toFile();
                 tmpDir = t.getParentFile();
             } catch (IOException e) {
                 //swallow
@@ -611,10 +615,12 @@ public class TikaGUI extends JFrame implements ActionListener, HyperlinkListener
 
             int splitAt = embeddedName.lastIndexOf('.');
             if (splitAt > 0) {
-                embeddedName.substring(splitAt);
+                embeddedName = embeddedName.substring(splitAt);
             }
 
-            File tmp = Files.createTempFile("tika-embedded-", suffix).toFile();
+            File tmp = Files
+                    .createTempFile("tika-embedded-", suffix)
+                    .toFile();
             wanted.put(embeddedName, tmp);
             return tmp;
         }
@@ -623,13 +629,13 @@ public class TikaGUI extends JFrame implements ActionListener, HyperlinkListener
             return downstreamParser.getSupportedTypes(context);
         }
 
-        public void parse(InputStream stream, ContentHandler handler, Metadata metadata,
-                          ParseContext context) throws IOException, SAXException, TikaException {
+        @Override
+        public void parse(InputStream stream, ContentHandler handler, Metadata metadata, ParseContext context) throws IOException, SAXException, TikaException {
             String name = metadata.get(TikaCoreProperties.RESOURCE_NAME_KEY);
             if (name != null && wanted.containsKey(name)) {
-                FileOutputStream out = new FileOutputStream(wanted.get(name));
-                IOUtils.copy(stream, out);
-                out.close();
+                try (FileOutputStream out = new FileOutputStream(wanted.get(name))) {
+                    IOUtils.copy(stream, out);
+                }
             } else {
                 if (downstreamParser != null) {
                     downstreamParser.parse(stream, handler, metadata, context);

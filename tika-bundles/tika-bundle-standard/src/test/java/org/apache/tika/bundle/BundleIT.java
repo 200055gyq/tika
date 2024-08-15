@@ -41,7 +41,7 @@ import java.util.Set;
 import java.util.jar.Attributes;
 import java.util.jar.JarInputStream;
 import java.util.jar.Manifest;
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 
 import org.junit.Ignore;
 import org.junit.Test;
@@ -340,7 +340,7 @@ public class BundleIT {
             }
             System.out.println("about to parse " + f);
             Metadata metadata = new Metadata();
-            try (InputStream is = TikaInputStream.get(f)) {
+            try (InputStream is = TikaInputStream.get(f.toPath())) {
                 parser.parse(is, handler, metadata, context);
             } catch (EncryptedDocumentException e) {
                 //swallow

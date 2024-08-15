@@ -38,7 +38,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.pdfbox.rendering.ImageType;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
@@ -238,7 +237,7 @@ public class PDFParserTest extends TikaTest {
         assertEquals("application/pdf", metadata.get(Metadata.CONTENT_TYPE));
         assertEquals("true", metadata.get("pdf:encrypted"));
         //pdf:encrypted, X-Parsed-By and Content-Type
-        assertEquals(4, metadata.names().length, "very little metadata should be parsed");
+        assertEquals(5, metadata.names().length, "very little metadata should be parsed");
         assertEquals(0, handler.toString().length());
     }
 
@@ -978,6 +977,15 @@ public class PDFParserTest extends TikaTest {
         assertContains("Mount Rushmore National Memorial", r.xml);
         //contains xfa fields and data
         assertContains("<li fieldName=\"School_Name\">School Name: my_school</li>", r.xml);
+        //This file does not have multiple values for a given key.
+        //It is not actually a useful test for TIKA-4171. We should
+        //find a small example test file and run something like this.
+        Matcher matcher = Pattern.compile("<li fieldName=").matcher(r.xml);
+        int listItems = 0;
+        while (matcher.find()) {
+            listItems++;
+        }
+        assertEquals(27, listItems);
     }
 
     @Test
@@ -1120,7 +1128,7 @@ public class PDFParserTest extends TikaTest {
                     pdfParser.getClass().getName());
             assertEquals(PDFParserConfig.OCR_STRATEGY.OCR_ONLY,
                     ((PDFParser) pdfParser).getPDFParserConfig().getOcrStrategy());
-            assertEquals(ImageType.RGB,
+            assertEquals(PDFParserConfig.TikaImageType.GRAY.RGB,
                     ((PDFParser) pdfParser).getPDFParserConfig().getOcrImageType());
         }
     }
@@ -1422,6 +1430,14 @@ public class PDFParserTest extends TikaTest {
         assertContains("EncryptedDocumentException",
                 metadataList.get(1).get(TikaCoreProperties.EMBEDDED_EXCEPTION));
 
+    }
+    @Test
+    public void testDefaultPDFOCR() throws Exception {
+        //test that even with no ocr -- there is no tesseract ocr parser in this module --
+        // AUTO mode would have returned one page that would have been OCR'd had there been OCR.
+        List<Metadata> metadataList = getRecursiveMetadata("testOCR.pdf");
+        assertEquals(1, metadataList.size());
+        assertEquals(1, metadataList.get(0).getInt(PDF.OCR_PAGE_COUNT));
     }
     /**
      * TODO -- need to test signature extraction

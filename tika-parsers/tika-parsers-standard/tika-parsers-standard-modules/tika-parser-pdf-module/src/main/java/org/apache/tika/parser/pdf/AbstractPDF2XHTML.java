@@ -302,7 +302,7 @@ class AbstractPDF2XHTML extends PDFTextStripper {
                     EmbeddedDocumentUtil.recordEmbeddedStreamException(e, parentMetadata);
                 }
                 if (bytes != null) {
-                    try (InputStream is = new UnsynchronizedByteArrayInputStream(bytes)) {
+                    try (InputStream is = UnsynchronizedByteArrayInputStream.builder().setByteArray(bytes).get()) {
                         parseMetadata(is, xfaMetadata);
                     }
                 }
@@ -533,7 +533,13 @@ class AbstractPDF2XHTML extends PDFTextStripper {
     void doOCROnCurrentPage(PDPage pdPage, PDFParserConfig.OCR_STRATEGY ocrStrategy)
             throws IOException, TikaException, SAXException {
         if (ocrStrategy.equals(NO_OCR)) {
+            //I don't think this is reachable?
             return;
+        }
+        //count the number of times that OCR would have been called
+        OCRPageCounter c = context.get(OCRPageCounter.class);
+        if (c != null) {
+            c.increment();
         }
         MediaType ocrImageMediaType = MediaType.image("ocr-" + config.getOcrImageFormatName());
         if (!ocrParser.getSupportedTypes(context).contains(ocrImageMediaType)) {
@@ -667,7 +673,7 @@ class AbstractPDF2XHTML extends PDFTextStripper {
 
         try {
             BufferedImage image =
-                    renderer.renderImageWithDPI(pageIndex, dpi, config.getOcrImageType());
+                    renderer.renderImageWithDPI(pageIndex, dpi, config.getOcrImageType().getImageType());
 
             //TODO -- get suffix based on OcrImageType
             tmpFile = tmpResources.createTempFile();
@@ -1175,7 +1181,7 @@ class AbstractPDF2XHTML extends PDFTextStripper {
             InputStream is = null;
             try {
                 is = new BufferedInputStream(
-                        new UnsynchronizedByteArrayInputStream(pdxfa.getBytes()));
+                        UnsynchronizedByteArrayInputStream.builder().setByteArray(pdxfa.getBytes()).get());
             } catch (IOException e) {
                 EmbeddedDocumentUtil.recordEmbeddedStreamException(e, metadata);
             }
@@ -1363,7 +1369,7 @@ class AbstractPDF2XHTML extends PDFTextStripper {
         //                && (endBookmarkPageNumber == -1 ||
         //                currentPageNo <= endBookmarkPageNumber))
         //        {
-        super.setStartPage(-1);
+        super.setStartPage(1);
         for (PDPage page : pages) {
             if (getCurrentPageNo() >= getStartPage() && getCurrentPageNo() <= getEndPage()) {
                 processPage(page);

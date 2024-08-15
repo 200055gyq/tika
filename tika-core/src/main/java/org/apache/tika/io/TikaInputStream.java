@@ -241,17 +241,6 @@ public class TikaInputStream extends TaggedInputStream {
     }
 
     /**
-     * @deprecated use {@link TikaInputStream#get(InputStream, TemporaryResources, Metadata)}
-     * @param stream
-     * @param tmp
-     * @return
-     */
-    @Deprecated
-    public static TikaInputStream get(InputStream stream, TemporaryResources tmp) {
-        return get(stream, tmp, null);
-    }
-
-    /**
      * Casts or wraps the given stream to a TikaInputStream instance.
      * This method can be used to access the functionality of this class
      * even when given just a normal input stream instance.
@@ -316,7 +305,6 @@ public class TikaInputStream extends TaggedInputStream {
      * @param data     input data
      * @param metadata metadata instance
      * @return a TikaInputStream instance
-     * @throws IOException
      */
     public static TikaInputStream get(byte[] data, Metadata metadata) {
         metadata.set(Metadata.CONTENT_LENGTH, Integer.toString(data.length));
@@ -865,6 +853,7 @@ public class TikaInputStream extends TaggedInputStream {
         }
     }
 
+    @Override
     public String toString() {
         String str = "TikaInputStream of ";
         if (hasFile()) {

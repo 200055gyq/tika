@@ -39,8 +39,8 @@ import org.apache.tika.metadata.Photoshop;
 import org.apache.tika.metadata.TIFF;
 import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.mime.MediaType;
-import org.apache.tika.parser.AbstractParser;
 import org.apache.tika.parser.ParseContext;
+import org.apache.tika.parser.Parser;
 import org.apache.tika.parser.xmp.JempboxExtractor;
 import org.apache.tika.sax.XHTMLContentHandler;
 
@@ -53,7 +53,7 @@ import org.apache.tika.sax.XHTMLContentHandler;
  * An MIT-licensed python parser with test files is:
  * https://github.com/psd-tools/psd-tools
  */
-public class PSDParser extends AbstractParser {
+public class PSDParser implements Parser {
 
     /**
      * Serial version UID
@@ -145,7 +145,7 @@ public class PSDParser extends AbstractParser {
                 //if there are multiple xmps in a file, this will
                 //overwrite the data from the earlier xmp
                 JempboxExtractor ex = new JempboxExtractor(metadata);
-                ex.parse(new UnsynchronizedByteArrayInputStream(rb.data));
+                ex.parse(UnsynchronizedByteArrayInputStream.builder().setByteArray(rb.data).get());
             }
             blocks++;
         }
@@ -201,7 +201,7 @@ public class PSDParser extends AbstractParser {
             // Read the block
             id = EndianUtils.readUShortBE(stream);
 
-            StringBuffer nameB = new StringBuffer();
+            StringBuilder nameB = new StringBuilder();
             int nameLen = 0;
             while (true) {
                 int v = stream.read();

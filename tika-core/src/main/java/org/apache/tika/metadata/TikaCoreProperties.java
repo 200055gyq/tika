@@ -53,13 +53,39 @@ public interface TikaCoreProperties {
 
     /**
      * This tracks the embedded file paths based on the name of embedded files
-     * where available.  There is a small risk that there may be path collisions
-     * and that these paths may not be unique within a file.
-     *
+     * where available.
+     * <p/>
+     * This field should be treated with great care and should NOT
+     * be used for creating a directory structure to write out attachments
+     * because: there may be path collisions or illegal characters or other mayhem.
+     * <p/>
      * For a more robust path, see {@link TikaCoreProperties#EMBEDDED_ID_PATH}.
      */
     Property EMBEDDED_RESOURCE_PATH =
             Property.internalText(TIKA_META_PREFIX + "embedded_resource_path");
+
+
+    /**
+     * This is calculated in {@link org.apache.tika.sax.RecursiveParserWrapperHandler}.
+     * It differs from {@link TikaCoreProperties#EMBEDDED_RESOURCE_PATH} in that
+     * it is calculated at the end of the full parse of a file. {@link TikaCoreProperties#EMBEDDED_RESOURCE_PATH}
+     * is calculated during the parse, and, for some parsers, an embedded file's name isn't known until
+     * after its child files have been parsed.
+     * <p/>
+     * Note that the unknown file count may differ between {@link TikaCoreProperties#EMBEDDED_RESOURCE_PATH}
+     * because there should be fewer unknown files when this is calculated. More simply,
+     * there is no connection between "embedded-1" in this field and "embedded-1" in
+     * {@link TikaCoreProperties#EMBEDDED_RESOURCE_PATH}.
+     * <p/>
+     * This field should be treated with great care and should NOT
+     * be used for creating a directory structure to write out attachments
+     * because: there may be path collisions or illegal characters or other mayhem.
+     * <p/>
+     *
+     * For a more robust path, see {@link TikaCoreProperties#EMBEDDED_ID_PATH}.
+     */
+    Property FINAL_EMBEDDED_RESOURCE_PATH =
+            Property.internalText(TIKA_META_PREFIX + "final_embedded_resource_path");
 
     /**
      * This tracks the embedded file paths based on the embedded file's
@@ -97,6 +123,10 @@ public interface TikaCoreProperties {
     //exception in an embedded file
     Property EMBEDDED_EXCEPTION =
             Property.internalTextBag(TIKA_META_EXCEPTION_PREFIX + "embedded_exception");
+
+    //exception handling the raw bytes of an embedded file by an EmbeddedDocumentByteStore
+    Property EMBEDDED_BYTES_EXCEPTION =
+            Property.internalTextBag(TIKA_META_EXCEPTION_PREFIX + "embedded_bytes_exception");
 
     //warning while parsing in an embedded file
     Property EMBEDDED_WARNING =
@@ -321,6 +351,22 @@ public interface TikaCoreProperties {
 
     //is the file encrypted
     Property IS_ENCRYPTED = Property.internalBoolean(TIKA_META_PREFIX + "encrypted");
+
+    /**
+     * When an EncodingDetector detects an encoding, the encoding should be stored in this field.
+     * This is different from {@link Metadata#CONTENT_ENCODING} because that is what a parser
+     * chooses to use for processing a file. If an EncodingDetector returns "null", a parser
+     * may choose to use a default encoding. We want to differentiate between a parser using a
+     * default encoding and the output of an EncodingDetector.
+     */
+    Property DETECTED_ENCODING = Property.externalText(TIKA_META_PREFIX + "detectedEncoding");
+
+
+    /**
+     * This should be the simple class name for the EncodingDetectors whose detected encoding
+     * was used in the parse.
+     */
+    Property ENCODING_DETECTOR = Property.externalText(TIKA_META_PREFIX + "encodingDetector");
 
     /**
      * General metadata key for the count of non-final versions available within a file.  This

@@ -20,8 +20,8 @@ import static org.apache.tika.server.core.resource.TikaResource.processHeaderCon
 
 import java.util.List;
 import java.util.Map;
-import javax.ws.rs.core.MultivaluedMap;
 
+import jakarta.ws.rs.core.MultivaluedMap;
 import org.apache.commons.lang3.StringUtils;
 
 import org.apache.tika.metadata.Metadata;
@@ -48,8 +48,7 @@ public class TesseractServerConfig implements ParseContextConfig {
      * @param parseContext the parse context to configure.
      */
     @Override
-    public void configure(MultivaluedMap<String, String> httpHeaders, Metadata metadata,
-                          ParseContext parseContext) {
+    public void configure(MultivaluedMap<String, String> httpHeaders, Metadata metadata, ParseContext parseContext) {
         //lazily initialize configs
         //if a header is submitted, any params set in --tika-config tika-config.xml
         //upon server startup will be ignored.
@@ -57,8 +56,10 @@ public class TesseractServerConfig implements ParseContextConfig {
         for (Map.Entry<String, List<String>> kvp : httpHeaders.entrySet()) {
             if (StringUtils.startsWithIgnoreCase(kvp.getKey(), X_TIKA_OCR_HEADER_PREFIX)) {
                 ocrConfig = (ocrConfig == null) ? new TesseractOCRConfig() : ocrConfig;
-                processHeaderConfig(ocrConfig, kvp.getKey(), kvp.getValue().get(0).trim(),
-                        X_TIKA_OCR_HEADER_PREFIX);
+                processHeaderConfig(ocrConfig, kvp.getKey(), kvp
+                        .getValue()
+                        .get(0)
+                        .trim(), X_TIKA_OCR_HEADER_PREFIX);
             }
         }
         if (ocrConfig != null) {

@@ -22,13 +22,13 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
 
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,14 +45,15 @@ import org.apache.tika.server.core.ServerStatus;
 public class TranslateResource {
     private static final Logger LOG = LoggerFactory.getLogger(TranslateResource.class);
     private final ServerStatus serverStatus;
+    private final long timeoutMillis;
     private Translator defaultTranslator;
     private ServiceLoader loader;
-    private final long timeoutMillis;
 
     public TranslateResource(ServerStatus serverStatus, long timeoutMillis) {
-        this.loader =
-                new ServiceLoader(ServiceLoader.class.getClassLoader(), LoadErrorHandler.WARN);
-        this.defaultTranslator = TikaResource.getConfig().getTranslator();
+        this.loader = new ServiceLoader(ServiceLoader.class.getClassLoader(), LoadErrorHandler.WARN);
+        this.defaultTranslator = TikaResource
+                .getConfig()
+                .getTranslator();
         this.serverStatus = serverStatus;
         this.timeoutMillis = timeoutMillis;
     }
@@ -62,8 +63,7 @@ public class TranslateResource {
     @Path("/all/{translator}/{src}/{dest}")
     @Consumes("*/*")
     @Produces("text/plain")
-    public String translate(final InputStream is, @PathParam("translator") String translator,
-                            @PathParam("src") String sLang, @PathParam("dest") String dLang)
+    public String translate(final InputStream is, @PathParam("translator") String translator, @PathParam("src") String sLang, @PathParam("dest") String dLang)
             throws TikaException, IOException {
         return doTranslate(IOUtils.toString(is, UTF_8), translator, sLang, dLang);
 
@@ -74,10 +74,11 @@ public class TranslateResource {
     @Path("/all/{translator}/{dest}")
     @Consumes("*/*")
     @Produces("text/plain")
-    public String autoTranslate(final InputStream is, @PathParam("translator") String translator,
-                                @PathParam("dest") String dLang) throws TikaException, IOException {
+    public String autoTranslate(final InputStream is, @PathParam("translator") String translator, @PathParam("dest") String dLang) throws TikaException, IOException {
         final String content = IOUtils.toString(is, UTF_8);
-        LanguageResult language = new OptimaizeLangDetector().loadModels().detect(content);
+        LanguageResult language = new OptimaizeLangDetector()
+                .loadModels()
+                .detect(content);
         if (language.isUnknown()) {
             throw new TikaException("Unable to detect language to use for translation of text");
         }
@@ -88,8 +89,7 @@ public class TranslateResource {
         return doTranslate(content, translator, sLang, dLang);
     }
 
-    private String doTranslate(String content, String translator, String sLang, String dLang)
-            throws TikaException, IOException {
+    private String doTranslate(String content, String translator, String sLang, String dLang) throws TikaException, IOException {
         LOG.info("Using translator: [{}]: src: [{}]: dest: [{}]", translator, sLang, dLang);
         Translator translate = byClassName(translator);
         if (translate == null) {
@@ -111,7 +111,10 @@ public class TranslateResource {
     private Translator byClassName(String className) {
         List<Translator> translators = loader.loadStaticServiceProviders(Translator.class);
         for (Translator t : translators) {
-            if (t.getClass().getName().equals(className)) {
+            if (t
+                    .getClass()
+                    .getName()
+                    .equals(className)) {
                 return t;
             }
         }

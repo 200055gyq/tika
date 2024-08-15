@@ -18,8 +18,7 @@ package org.apache.tika.server.core.config;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import javax.ws.rs.core.MultivaluedMap;
-
+import jakarta.ws.rs.core.MultivaluedMap;
 import org.apache.commons.codec.binary.Base64;
 
 import org.apache.tika.metadata.Metadata;
@@ -38,8 +37,7 @@ public class PasswordProviderConfig implements ParseContextConfig {
     }
 
     @Override
-    public void configure(MultivaluedMap<String, String> httpHeaders, Metadata metadata,
-                          ParseContext context) {
+    public void configure(MultivaluedMap<String, String> httpHeaders, Metadata metadata, ParseContext context) {
         String tmpPassword = httpHeaders.getFirst(PASSWORD_BASE64_UTF8);
         if (tmpPassword != null) {
             tmpPassword = decodeBase64UTF8(tmpPassword);

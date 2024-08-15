@@ -56,7 +56,8 @@ public class TikaDetectionTest {
         assertEquals("application/java-archive", tika.detect("x.jar"));
         assertEquals("application/java-serialized-object", tika.detect("x.ser"));
         assertEquals("application/java-vm", tika.detect("x.class"));
-        assertEquals("application/javascript", tika.detect("x.js"));
+        assertEquals("text/javascript", tika.detect("x.js"));
+        assertEquals("text/javascript", tika.detect("x.mjs"));
         assertEquals("application/json", tika.detect("x.json"));
         assertEquals("application/lost+xml", tika.detect("x.lostxml"));
         assertEquals("application/mac-binhex40", tika.detect("x.hqx"));
@@ -354,7 +355,7 @@ public class TikaDetectionTest {
         assertEquals("application/vnd.ms-ims", tika.detect("x.ims"));
         assertEquals("application/vnd.ms-lrm", tika.detect("x.lrm"));
         assertEquals("application/vnd.ms-pki.seccat", tika.detect("x.cat"));
-        assertEquals("application/vnd.ms-pki.stl", tika.detect("x.stl"));
+        assertEquals("model/x.stl-binary", tika.detect("x.stl"));
         assertEquals("application/vnd.ms-powerpoint", tika.detect("x.ppt"));
         assertEquals("application/vnd.ms-powerpoint", tika.detect("x.pps"));
         assertEquals("application/vnd.ms-powerpoint", tika.detect("x.pot"));

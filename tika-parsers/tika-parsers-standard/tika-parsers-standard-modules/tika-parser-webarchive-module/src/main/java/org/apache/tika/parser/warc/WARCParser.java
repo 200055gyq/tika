@@ -44,16 +44,21 @@ import org.apache.tika.metadata.Property;
 import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.metadata.WARC;
 import org.apache.tika.mime.MediaType;
-import org.apache.tika.parser.AbstractParser;
 import org.apache.tika.parser.ParseContext;
+import org.apache.tika.parser.Parser;
 import org.apache.tika.sax.XHTMLContentHandler;
 import org.apache.tika.utils.StringUtils;
 
-public class WARCParser extends AbstractParser {
+/**
+ * This uses jwarc to parse warc files and arc files
+ */
+public class WARCParser implements Parser {
 
     private static final Set<MediaType> SUPPORTED_TYPES = Collections.unmodifiableSet(
             new HashSet<>(Arrays.asList(MediaType.application("warc"),
-                    MediaType.application("warc+gz"))));
+                    MediaType.application("warc+gz"),
+                    MediaType.application("x-internet-archive"),
+                    MediaType.application("arc+gz"))));
 
     public static String WARC_PREFIX = "warc:";
     public static String WARC_HTTP_PREFIX = WARC_PREFIX + "http:";
@@ -130,9 +135,10 @@ public class WARCParser extends AbstractParser {
         setNotNull(WARC.WARC_PAYLOAD_CONTENT_TYPE, warcResponse.payloadType(), metadata);
         processWarcMetadata(warcResponse, metadata);
         processHttpResponseMetadata(warcResponse.http(), metadata);
-
-        String id = warcResponse.id().toString();
-        metadata.set(TikaCoreProperties.RESOURCE_NAME_KEY, id);
+        if (warcResponse.warcinfoID().isPresent()) {
+            String id = warcResponse.id().toString();
+            metadata.set(TikaCoreProperties.RESOURCE_NAME_KEY, id);
+        }
         WarcPayload payload = optionalPayload.get();
         metadata.set(WARC.WARC_RECORD_CONTENT_TYPE, payload.type().toString());
         metadata.set(Metadata.CONTENT_LENGTH, Long.toString(payload.body().size()));

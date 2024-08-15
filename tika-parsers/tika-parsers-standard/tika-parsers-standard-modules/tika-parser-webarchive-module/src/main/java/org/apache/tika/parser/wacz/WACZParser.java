@@ -41,11 +41,11 @@ import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.mime.MediaType;
-import org.apache.tika.parser.AbstractParser;
 import org.apache.tika.parser.ParseContext;
+import org.apache.tika.parser.Parser;
 import org.apache.tika.sax.XHTMLContentHandler;
 
-public class WACZParser extends AbstractParser {
+public class WACZParser implements Parser {
 
     private static final Set<MediaType> SUPPORTED_TYPES = Collections.unmodifiableSet(
             new HashSet<>(Arrays.asList(MediaType.application("x-wacz"))));
@@ -66,7 +66,7 @@ public class WACZParser extends AbstractParser {
         if (stream instanceof TikaInputStream) {
             ZipFile zip = (ZipFile) ((TikaInputStream) stream).getOpenContainer();
             if (zip == null && ((TikaInputStream)stream).hasFile()) {
-                zip = new ZipFile(((TikaInputStream)stream).getFile());
+                zip = ZipFile.builder().setFile(((TikaInputStream) stream).getFile()).get();
             }
             if (zip != null) {
                 try {
@@ -87,7 +87,7 @@ public class WACZParser extends AbstractParser {
                                EmbeddedDocumentExtractor ex) throws SAXException, IOException {
         try (ZipArchiveInputStream zais = new ZipArchiveInputStream(
                 CloseShieldInputStream.wrap(stream))) {
-            ZipArchiveEntry zae = zais.getNextZipEntry();
+            ZipArchiveEntry zae = zais.getNextEntry();
             while (zae != null) {
                 String name = zae.getName();
                 if (name.startsWith("archive/")) {
@@ -99,7 +99,7 @@ public class WACZParser extends AbstractParser {
                 }
                 //TODO -- process pages (jsonl); process indexes?!
 
-                zae = zais.getNextZipEntry();
+                zae = zais.getNextEntry();
             }
         }
     }

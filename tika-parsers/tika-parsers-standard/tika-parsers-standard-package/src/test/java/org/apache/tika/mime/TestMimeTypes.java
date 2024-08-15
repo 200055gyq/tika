@@ -213,6 +213,12 @@ public class TestMimeTypes {
     }
 
     @Test
+    public void testSTL() throws Exception {
+        assertTypeByNameAndData("model/x.stl-binary", "testSTL-binary.stl");
+        assertTypeByNameAndData("model/x.stl-ascii", "testSTL-ascii.stl");
+    }
+
+    @Test
     public void testTTML() throws Exception {
         assertTypeByData("application/ttml+xml", "test_ttml.ttml");
         assertTypeByNameAndData("application/ttml+xml", "test_ttml.ttml");
@@ -718,8 +724,8 @@ public class TestMimeTypes {
         assertTypeByName("text/html", "testHTML.html");
         assertType("text/html", "testHTML.html");
 
-        assertTypeByName("application/javascript", "testJS.js");
-        assertType("application/javascript", "testJS.js");
+        assertTypeByName("text/javascript", "testJS.js");
+        assertType("text/javascript", "testJS.js");
 
         assertType("text/vnd.graphviz", "testGRAPHVIZd.dot");
         assertType("text/vnd.graphviz", "testGRAPHVIZg.dot");
@@ -1023,6 +1029,7 @@ public class TestMimeTypes {
     @Test
     public void testRobots() throws Exception {
         assertTypeByData("text/x-robots", "testRobots.txt");
+        assertTypeByData("text/x-robots", "testRobots2.txt");
     }
 
     @Test
@@ -1147,10 +1154,10 @@ public class TestMimeTypes {
         assertTypeByData("text/x-matlab", "testMATLAB_barcast.m");
 
         // By name, or by name+data, gets it as JS
-        assertTypeByName("application/javascript", "testJS.js");
-        assertTypeByName("application/javascript", "testJS_HTML.js");
-        assertType("application/javascript", "testJS.js");
-        assertType("application/javascript", "testJS_HTML.js");
+        assertTypeByName("text/javascript", "testJS.js");
+        assertTypeByName("text/javascript", "testJS_HTML.js");
+        assertType("text/javascript", "testJS.js");
+        assertType("text/javascript", "testJS_HTML.js");
 
         // With data only, because we have no JS file magic, can't be
         //  detected. One will come through as plain text, the other
@@ -1220,6 +1227,7 @@ public class TestMimeTypes {
         // Once solved, see TIKA-3784, ought to work for name or data
         //assertType("application/x-pkcs12", "testRSAKEYandCERT.p12");
         //assertTypeByData("application/x-pkcs12", "testRSAKEYandCERT.p12"); // pass=tika
+        assertTypeByData("application/x-java-keystore", "KeyStore.jks");
     }
 
     @Test
@@ -1228,6 +1236,10 @@ public class TestMimeTypes {
         assertType("text/x-vcalendar", "testVCalendar.vcs");
         assertTypeByData("text/calendar", "testICalendar.ics");
         assertTypeByData("text/x-vcalendar", "testVCalendar.vcs");
+        //TIKA-4244
+        //this tests detection with content intervening between the BEGIN:VCALENDAR and the VERSION:2.0 entry
+        assertType("text/calendar", "testICalendar_w_prodId.ics");
+        assertTypeByData("text/calendar", "testICalendar_w_prodId.ics");
     }
 
     @Test

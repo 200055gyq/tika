@@ -33,14 +33,14 @@ import org.apache.tika.extractor.EmbeddedDocumentUtil;
 import org.apache.tika.metadata.Database;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.mime.MediaType;
-import org.apache.tika.parser.AbstractParser;
 import org.apache.tika.parser.ParseContext;
+import org.apache.tika.parser.Parser;
 import org.apache.tika.sax.XHTMLContentHandler;
 
 /**
  * Abstract class that handles iterating through tables within a database.
  */
-public abstract class AbstractDBParser extends AbstractParser {
+public abstract class AbstractDBParser implements Parser {
 
     private final static byte[] EMPTY_BYTE_ARR = new byte[0];
 
@@ -78,6 +78,9 @@ public abstract class AbstractDBParser extends AbstractParser {
             //add table names to parent metadata
             metadata.add(Database.TABLE_NAME, tableName);
         }
+
+        extractMetadata(connection, metadata);
+
         xHandler = new XHTMLContentHandler(handler, metadata);
         xHandler.startDocument();
 
@@ -112,6 +115,17 @@ public abstract class AbstractDBParser extends AbstractParser {
                 xHandler.endDocument();
             }
         }
+    }
+
+    /**
+     * This is called before parsing the tables to extract metadata from the db, if any.
+     * Override this for db specific metadata. This implementation is a no-op
+     *
+     * @param connection
+     * @param metadata
+     */
+    protected void extractMetadata(Connection connection, Metadata metadata) {
+
     }
 
     /**

@@ -28,15 +28,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.GET;
-import javax.ws.rs.HEAD;
-import javax.ws.rs.OPTIONS;
-import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
 
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.HEAD;
+import jakarta.ws.rs.OPTIONS;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
 import org.apache.cxf.jaxrs.lifecycle.ResourceProvider;
 
 import org.apache.tika.Tika;
@@ -49,8 +49,7 @@ import org.apache.tika.server.core.HTMLHelper;
 public class TikaWelcome {
     private static final String DOCS_URL = "https://wiki.apache.org/tika/TikaJAXRS";
 
-    private static final Map<Class<? extends Annotation>, String> HTTP_METHODS =
-            new HashMap<>();
+    private static final Map<Class<? extends Annotation>, String> HTTP_METHODS = new HashMap<>();
 
     static {
         HTTP_METHODS.put(DELETE.class, "DELETE");
@@ -79,9 +78,13 @@ public class TikaWelcome {
             Path p = endpoint.getAnnotation(Path.class);
             String basePath = null;
             if (p != null) {
-                basePath =
-                        p.value().endsWith("/") ? p.value().substring(0, p.value().length() - 2) :
-                                p.value();
+                basePath = p
+                        .value()
+                        .endsWith("/") ? p
+                        .value()
+                        .substring(0, p
+                                .value()
+                                .length() - 2) : p.value();
             }
 
             for (Method m : endpoint.getMethods()) {
@@ -122,7 +125,9 @@ public class TikaWelcome {
                 }
             }
         }
-        found.sort(Comparator.comparing((Endpoint e) -> e.path).thenComparing(e -> e.methodName));
+        found.sort(Comparator
+                .comparing((Endpoint e) -> e.path)
+                .thenComparing(e -> e.methodName));
         return found;
     }
 
@@ -150,7 +155,11 @@ public class TikaWelcome {
         if (m.find()) {
             String versionNumber = m.group();
             String miredot = "https://tika.apache.org/" + versionNumber + "/miredot/index.html";
-            h.append(" and <a href=\"").append(miredot).append("\">").append(miredot)
+            h
+                    .append(" and <a href=\"")
+                    .append(miredot)
+                    .append("\">")
+                    .append(miredot)
                     .append("</a>");
         }
         h.append("</p>\n");
@@ -184,7 +193,7 @@ public class TikaWelcome {
     @Produces("text/plain")
     public String getWelcomePlain() {
         TikaResource.checkIsOperating();
-        StringBuffer text = new StringBuffer();
+        StringBuilder text = new StringBuilder();
 
         text.append(tika.toString());
         text.append("\n");
@@ -214,8 +223,7 @@ public class TikaWelcome {
         public final String httpMethod;
         public final List<String> produces;
 
-        protected Endpoint(Class<?> endpoint, Method method, String path, String httpMethod,
-                           String[] produces) {
+        protected Endpoint(Class<?> endpoint, Method method, String path, String httpMethod, String[] produces) {
             this.className = endpoint.getCanonicalName();
             this.methodName = method.getName();
             this.path = path;

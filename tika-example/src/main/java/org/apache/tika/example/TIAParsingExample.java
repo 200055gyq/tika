@@ -20,13 +20,15 @@ package org.apache.tika.example;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.Reader;
+import java.io.Writer;
 import java.net.URL;
 import java.nio.CharBuffer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -100,13 +102,13 @@ public class TIAParsingExample {
         ContentHandler handler = new DefaultHandler();
         Metadata metadata = new Metadata();
         ParseContext context = new ParseContext();
-        try (InputStream stream = TikaInputStream.get(new File(filename))) {
+        try (InputStream stream = TikaInputStream.get(Paths.get(filename))) {
             parser.parse(stream, handler, metadata, context);
         }
     }
 
     public static File tikaInputStreamGetFile(String filename) throws Exception {
-        try (InputStream stream = TikaInputStream.get(new File(filename))) {
+        try (InputStream stream = TikaInputStream.get(Paths.get(filename))) {
             TikaInputStream tikaInputStream = TikaInputStream.get(stream);
             return tikaInputStream.getFile();
         }
@@ -153,9 +155,8 @@ public class TIAParsingExample {
         ParseContext context = new ParseContext();
         Parser parser = new AutoDetectParser();
         LinkContentHandler linkCollector = new LinkContentHandler();
-        try (OutputStream output = new FileOutputStream(new File(filename))) {
-            ContentHandler handler =
-                    new TeeContentHandler(new BodyContentHandler(output), linkCollector);
+        try (Writer writer = Files.newBufferedWriter(Paths.get(filename), StandardCharsets.UTF_8)) {
+            ContentHandler handler = new TeeContentHandler(new BodyContentHandler(writer), linkCollector);
             parser.parse(stream, handler, metadata, context);
         }
     }
@@ -190,9 +191,7 @@ public class TIAParsingExample {
             private static final long serialVersionUID = 4424210691523343833L;
 
             @Override
-            public void parse(InputStream stream, ContentHandler handler, Metadata metadata,
-                              ParseContext context)
-                    throws IOException, SAXException, TikaException {
+            public void parse(InputStream stream, ContentHandler handler, Metadata metadata, ParseContext context) throws IOException, SAXException, TikaException {
                 // custom processing of the component document
             }
         });

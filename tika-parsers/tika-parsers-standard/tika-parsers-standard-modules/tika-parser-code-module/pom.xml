@@ -43,13 +43,7 @@
     <dependency>
       <groupId>org.ccil.cowan.tagsoup</groupId>
       <artifactId>tagsoup</artifactId>
-      <version>${tagsoup.version}</version>
     </dependency>
-
-    <!-- WARNING: when you upgrade asm make sure that you update the
-        OpCode in the initializer in org.apache.tika.parser.asm.XHTMLClassVisitor
-        See TIKA-2992.
-    -->
     <dependency>
       <groupId>org.ow2.asm</groupId>
       <artifactId>asm</artifactId>
@@ -92,6 +86,6 @@
   </build>
 
   <scm>
-    <tag>2.2.1-rc2</tag>
+    <tag>3.0.0-BETA2-rc1</tag>
   </scm>
 </project>

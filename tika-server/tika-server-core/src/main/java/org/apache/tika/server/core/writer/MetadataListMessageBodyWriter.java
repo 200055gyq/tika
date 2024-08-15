@@ -25,38 +25,35 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
-import javax.ws.rs.Produces;
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.MultivaluedMap;
-import javax.ws.rs.ext.MessageBodyWriter;
-import javax.ws.rs.ext.Provider;
 
-import org.apache.tika.metadata.serialization.JsonMetadataList;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.MultivaluedMap;
+import jakarta.ws.rs.ext.MessageBodyWriter;
+import jakarta.ws.rs.ext.Provider;
+
+import org.apache.tika.serialization.JsonMetadataList;
 import org.apache.tika.server.core.MetadataList;
 
 @Provider
 @Produces(MediaType.APPLICATION_JSON)
 public class MetadataListMessageBodyWriter implements MessageBodyWriter<MetadataList> {
 
-    public boolean isWriteable(Class<?> type, Type genericType, Annotation[] annotations,
-                               MediaType mediaType) {
+    public boolean isWriteable(Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
         if (!MediaType.APPLICATION_JSON_TYPE.equals(mediaType)) {
             return false;
         }
         return type.isAssignableFrom(MetadataList.class);
     }
 
-    public long getSize(MetadataList data, Class<?> type, Type genericType,
-                        Annotation[] annotations, MediaType mediaType) {
+    public long getSize(MetadataList data, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
         return -1;
     }
 
     @Override
-    public void writeTo(MetadataList list, Class<?> type, Type genericType,
-                        Annotation[] annotations, MediaType mediaType,
-                        MultivaluedMap<String, Object> httpHeaders, OutputStream entityStream)
-            throws IOException, WebApplicationException {
+    public void writeTo(MetadataList list, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, Object> httpHeaders,
+                        OutputStream entityStream) throws IOException, WebApplicationException {
         try (Writer writer = new OutputStreamWriter(entityStream, UTF_8)) {
             JsonMetadataList.toJson(list.getMetadata(), writer);
         }

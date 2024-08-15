@@ -30,15 +30,15 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import javax.ws.rs.PUT;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.UriInfo;
 
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.Context;
+import jakarta.ws.rs.core.HttpHeaders;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.UriInfo;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.io.FilenameUtils;
@@ -78,10 +78,8 @@ public class UnpackerResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(UnpackerResource.class);
 
-    public static void metadataToCsv(Metadata metadata, OutputStream outputStream)
-            throws IOException {
-        CSVPrinter writer =
-                new CSVPrinter(new OutputStreamWriter(outputStream, UTF_8), CSVFormat.EXCEL);
+    public static void metadataToCsv(Metadata metadata, OutputStream outputStream) throws IOException {
+        CSVPrinter writer = new CSVPrinter(new OutputStreamWriter(outputStream, UTF_8), CSVFormat.EXCEL);
 
         for (String name : metadata.names()) {
             String[] values = metadata.getValues(name);
@@ -97,34 +95,28 @@ public class UnpackerResource {
     @Path("/{id:(/.*)?}")
     @PUT
     @Produces({"application/zip", "application/x-tar"})
-    public Map<String, byte[]> unpack(InputStream is, @Context HttpHeaders httpHeaders,
-                                      @Context UriInfo info) throws Exception {
-        return process(TikaResource.getInputStream(is, new Metadata(), httpHeaders, info),
-                httpHeaders,
-                info, false);
+    public Map<String, byte[]> unpack(InputStream is, @Context HttpHeaders httpHeaders, @Context UriInfo info) throws Exception {
+        return process(TikaResource.getInputStream(is, new Metadata(), httpHeaders, info), httpHeaders, info, false);
     }
 
     @Path("/all{id:(/.*)?}")
     @PUT
     @Produces({"application/zip", "application/x-tar"})
-    public Map<String, byte[]> unpackAll(InputStream is, @Context HttpHeaders httpHeaders,
-                                         @Context UriInfo info) throws Exception {
-        return process(TikaResource.getInputStream(is, new Metadata(), httpHeaders, info),
-                httpHeaders,
-                info, true);
+    public Map<String, byte[]> unpackAll(InputStream is, @Context HttpHeaders httpHeaders, @Context UriInfo info) throws Exception {
+        return process(TikaResource.getInputStream(is, new Metadata(), httpHeaders, info), httpHeaders, info, true);
     }
 
-    private Map<String, byte[]> process(InputStream is, @Context HttpHeaders httpHeaders,
-                                        @Context UriInfo info, boolean saveAll) throws Exception {
+    private Map<String, byte[]> process(InputStream is, @Context HttpHeaders httpHeaders, @Context UriInfo info, boolean saveAll) throws Exception {
         Metadata metadata = new Metadata();
         ParseContext pc = new ParseContext();
         long unpackMaxBytes = DEFAULT_MAX_ATTACHMENT_BYTES;
-        String unpackMaxBytesString = httpHeaders.getRequestHeaders().getFirst(UNPACK_MAX_BYTES_KEY);
+        String unpackMaxBytesString = httpHeaders
+                .getRequestHeaders()
+                .getFirst(UNPACK_MAX_BYTES_KEY);
         if (!StringUtils.isBlank(unpackMaxBytesString)) {
             unpackMaxBytes = Long.parseLong(unpackMaxBytesString);
             if (unpackMaxBytes > Integer.MAX_VALUE) {
-                throw new IllegalArgumentException("Can't request value > than Integer" +
-                        ".MAX_VALUE : " + unpackMaxBytes);
+                throw new IllegalArgumentException("Can't request value > than Integer" + ".MAX_VALUE : " + unpackMaxBytes);
             } else if (unpackMaxBytes < 0) {
                 throw new IllegalArgumentException("Can't request value < 0: " + unpackMaxBytes);
             }
@@ -142,11 +134,12 @@ public class UnpackerResource {
         //we need to add this to allow for "inline" use of other parsers.
         pc.set(Parser.class, parser);
         ContentHandler ch;
-        UnsynchronizedByteArrayOutputStream text = new UnsynchronizedByteArrayOutputStream();
+        UnsynchronizedByteArrayOutputStream text = UnsynchronizedByteArrayOutputStream
+                .builder()
+                .get();
 
         if (saveAll) {
-            ch = new BodyContentHandler(
-                    new RichTextContentHandler(new OutputStreamWriter(text, UTF_8)));
+            ch = new BodyContentHandler(new RichTextContentHandler(new OutputStreamWriter(text, UTF_8)));
         } else {
             ch = new DefaultHandler();
         }
@@ -165,7 +158,9 @@ public class UnpackerResource {
         if (saveAll) {
             files.put(TEXT_FILENAME, text.toByteArray());
 
-            UnsynchronizedByteArrayOutputStream metaStream = new UnsynchronizedByteArrayOutputStream();
+            UnsynchronizedByteArrayOutputStream metaStream = UnsynchronizedByteArrayOutputStream
+                    .builder()
+                    .get();
             metadataToCsv(metadata, metaStream);
 
             files.put(META_FILENAME, metaStream.toByteArray());
@@ -179,8 +174,7 @@ public class UnpackerResource {
         private final Map<String, byte[]> zout;
 
         private final long unpackMaxBytes;
-        private final EmbeddedStreamTranslator embeddedStreamTranslator =
-                new DefaultEmbeddedStreamTranslator();
+        private final EmbeddedStreamTranslator embeddedStreamTranslator = new DefaultEmbeddedStreamTranslator();
 
         MyEmbeddedDocumentExtractor(MutableInt count, Map<String, byte[]> zout, long unpackMaxBytes) {
             this.count = count;
@@ -192,19 +186,17 @@ public class UnpackerResource {
             return true;
         }
 
-        public void parseEmbedded(InputStream inputStream, ContentHandler contentHandler,
-                                  Metadata metadata, boolean b) throws SAXException, IOException {
-            UnsynchronizedByteArrayOutputStream bos = new UnsynchronizedByteArrayOutputStream();
+        public void parseEmbedded(InputStream inputStream, ContentHandler contentHandler, Metadata metadata, boolean b) throws SAXException, IOException {
+            UnsynchronizedByteArrayOutputStream bos = UnsynchronizedByteArrayOutputStream
+                    .builder()
+                    .get();
 
             BoundedInputStream bis = new BoundedInputStream(unpackMaxBytes, inputStream);
             IOUtils.copy(bis, bos);
             if (bis.hasHitBound()) {
-                throw new IOException(
-                        new TikaMemoryLimitException("An attachment is longer than " +
-                                "'unpackMaxBytes' (default=100MB, actual=" + unpackMaxBytes + "). " +
-                                "If you need to increase this " +
-                                "limit, add a header to your request, such as: unpackMaxBytes: " +
-                                "1073741824.  There is a hard limit of 2GB."));
+                throw new IOException(new TikaMemoryLimitException(
+                        "An attachment is longer than " + "'unpackMaxBytes' (default=100MB, actual=" + unpackMaxBytes + "). " + "If you need to increase this " +
+                                "limit, add a header to your request, such as: unpackMaxBytes: " + "1073741824.  There is a hard limit of 2GB."));
             }
             byte[] data = bos.toByteArray();
 
@@ -217,7 +209,10 @@ public class UnpackerResource {
 
             if (!name.contains(".") && contentType != null) {
                 try {
-                    String ext = TikaResource.getConfig().getMimeRepository().forName(contentType)
+                    String ext = TikaResource
+                            .getConfig()
+                            .getMimeRepository()
+                            .forName(contentType)
                             .getExtension();
 
                     if (ext != null) {
@@ -227,11 +222,12 @@ public class UnpackerResource {
                     LOG.warn("Unexpected MimeTypeException", e);
                 }
             }
-            try (InputStream is = new UnsynchronizedByteArrayInputStream(data)) {
+            try (InputStream is = UnsynchronizedByteArrayInputStream.builder().setByteArray(data).get()) {
                 if (embeddedStreamTranslator.shouldTranslate(is, metadata)) {
-                    InputStream translated = embeddedStreamTranslator
-                            .translate(new UnsynchronizedByteArrayInputStream(data), metadata);
-                    UnsynchronizedByteArrayOutputStream bos2 = new UnsynchronizedByteArrayOutputStream();
+                    InputStream translated = embeddedStreamTranslator.translate(UnsynchronizedByteArrayInputStream.builder().setByteArray(data).get(), metadata);
+                    UnsynchronizedByteArrayOutputStream bos2 = UnsynchronizedByteArrayOutputStream
+                            .builder()
+                            .get();
                     IOUtils.copy(translated, bos2);
                     data = bos2.toByteArray();
                 }
@@ -262,7 +258,9 @@ public class UnpackerResource {
                 normalizedName = normalizedName.substring(prefixLength);
             }
             if (zout.containsKey(normalizedName)) {
-                return UUID.randomUUID().toString() + "-" + normalizedName;
+                return UUID
+                        .randomUUID()
+                        .toString() + "-" + normalizedName;
             }
             return normalizedName;
         }

@@ -21,6 +21,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.File;
 import java.io.InputStream;
+import java.nio.file.Paths;
 
 import org.apache.commons.io.FileUtils;
 import org.xml.sax.ContentHandler;
@@ -69,41 +70,33 @@ public class MyFirstTika {
         System.out.println(text);
     }
 
-    public static String parseUsingAutoDetect(String filename, TikaConfig tikaConfig,
-                                              Metadata metadata) throws Exception {
+    public static String parseUsingAutoDetect(String filename, TikaConfig tikaConfig, Metadata metadata) throws Exception {
         System.out.println("Handling using AutoDetectParser: [" + filename + "]");
 
         AutoDetectParser parser = new AutoDetectParser(tikaConfig);
         ContentHandler handler = new BodyContentHandler();
-        TikaInputStream stream = TikaInputStream.get(new File(filename), metadata);
+        TikaInputStream stream = TikaInputStream.get(Paths.get(filename), metadata);
         parser.parse(stream, handler, metadata, new ParseContext());
         return handler.toString();
     }
 
-    public static String parseUsingComponents(String filename, TikaConfig tikaConfig,
-                                              Metadata metadata) throws Exception {
+    public static String parseUsingComponents(String filename, TikaConfig tikaConfig, Metadata metadata) throws Exception {
         MimeTypes mimeRegistry = tikaConfig.getMimeRepository();
 
         System.out.println("Examining: [" + filename + "]");
 
         metadata.set(TikaCoreProperties.RESOURCE_NAME_KEY, filename);
-        System.out.println(
-                "The MIME type (based on filename) is: [" + mimeRegistry.detect(null, metadata) +
-                        "]");
+        System.out.println("The MIME type (based on filename) is: [" + mimeRegistry.detect(null, metadata) + "]");
 
-        InputStream stream = TikaInputStream.get(new File(filename));
-        System.out.println(
-                "The MIME type (based on MAGIC) is: [" + mimeRegistry.detect(stream, metadata) +
-                        "]");
+        InputStream stream = TikaInputStream.get(Paths.get(filename));
+        System.out.println("The MIME type (based on MAGIC) is: [" + mimeRegistry.detect(stream, metadata) + "]");
 
-        stream = TikaInputStream.get(new File(filename));
+        stream = TikaInputStream.get(Paths.get(filename));
         Detector detector = tikaConfig.getDetector();
-        System.out.println("The MIME type (based on the Detector interface) is: [" +
-                detector.detect(stream, metadata) + "]");
+        System.out.println("The MIME type (based on the Detector interface) is: [" + detector.detect(stream, metadata) + "]");
 
         LanguageDetector langDetector = new OptimaizeLangDetector().loadModels();
-        LanguageResult lang =
-                langDetector.detect(FileUtils.readFileToString(new File(filename), UTF_8));
+        LanguageResult lang = langDetector.detect(FileUtils.readFileToString(new File(filename), UTF_8));
 
         System.out.println("The language of this content is: [" + lang.getLanguage() + "]");
 
